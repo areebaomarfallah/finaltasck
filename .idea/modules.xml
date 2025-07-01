@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Book-Card integration.iml" filepath="$PROJECT_DIR$/.idea/Book-Card integration.iml" />
+      <module fileurl="file://$PROJECT_DIR$/library-management-system/library-management-system.iml" filepath="$PROJECT_DIR$/library-management-system/library-management-system.iml" />
     </modules>
   </component>
 </project>
