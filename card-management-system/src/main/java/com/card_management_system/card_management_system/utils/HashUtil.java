@@ -1,4 +1,4 @@
-package com.card_management_system.card_management_system;
+package com.card_management_system.card_management_system.utils;
 
 import org.springframework.security.crypto.bcrypt.BCrypt;
 

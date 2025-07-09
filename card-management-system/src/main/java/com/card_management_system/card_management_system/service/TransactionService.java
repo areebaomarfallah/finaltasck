@@ -1,55 +1,93 @@
 package com.card_management_system.card_management_system.service;
 
-import com.card_management_system.card_management_system.enume.*;
+import com.card_management_system.card_management_system.exception.InsufficientFundsException;
+import com.card_management_system.card_management_system.exception.InvalidTransactionException;
+import com.card_management_system.card_management_system.dto.TransactionRequestDTO;
+import com.card_management_system.card_management_system.dto.TransactionResponseDTO;
+
 import com.card_management_system.card_management_system.model.*;
-import com.card_management_system.card_management_system.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.card_management_system.card_management_system.repository.TransactionRepository;
+import com.card_management_system.card_management_system.dto.converter.TransactionConverter;
+import com.card_management_system.card_management_system.utils.CommonEnum;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 @Service
+@RequiredArgsConstructor
 @Transactional
-public class TransactionService {
+public  class TransactionService {
 
-    @Autowired
-    private TransactionRepository transactionRepository;
-
-    @Autowired
-    private CardService cardService;
-
-    @Autowired
-    private AccountService accountService;
-
-    public Transaction processTransaction(Transaction transaction) {
-        Card card = transaction.getCard();
+    private final TransactionRepository transactionRepository;
+    private final CardService cardService;
+    private final AccountService accountService;
+    private final TransactionConverter transactionConverter;
+    public TransactionResponseDTO processTransaction(TransactionRequestDTO request) {
+        Card card = cardService.getCardByHash(request.getCardNumberHash());
         Account account = card.getAccount();
 
-        // Validate card and account
-        validateTransaction(transaction, card, account);
+        // Essential validations
+        if (!cardService.isCardValid(card.getId())) {
+            throw new InvalidTransactionException("Invalid card");
+        }
+        if (!accountService.isAccountActive(account.getId())) {
+            throw new InvalidTransactionException("Inactive account");
+        }
+        if (request.getTransactionType() == CommonEnum.TransactionType.DEBIT &&
+                !accountService.hasSufficientBalance(account.getId(), request.getTransactionAmount())) {
+            throw new InsufficientFundsException("Insufficient funds");
+        }
 
         // Process transaction
-        if (transaction.getTransactionType() == TransactionType.DEBIT) {
+        Transaction transaction = new Transaction();
+        transaction.setTransactionAmount(request.getTransactionAmount());
+        transaction.setTransactionType(request.getTransactionType());
+        transaction.setTransactionDate(LocalDateTime.now());
+        transaction.setCard(card);
+        transaction.setStatus(CommonEnum.Status.SUCCESS);
+
+        // Update balance
+        if (request.getTransactionType() == CommonEnum.TransactionType.DEBIT) {
+            account.setBalance(account.getBalance().subtract(request.getTransactionAmount()));
+        } else {
+            account.setBalance(account.getBalance().add(request.getTransactionAmount()));
+        }
+
+        return transactionConverter.toDto(transactionRepository.save(transaction));
+    }
+    private void processTransactionAmount(Transaction transaction, Account account) {
+
+        if (transaction.getTransactionType() == CommonEnum.TransactionType.DEBIT) {
+
             account.setBalance(account.getBalance().subtract(transaction.getTransactionAmount()));
+
         } else {
             account.setBalance(account.getBalance().add(transaction.getTransactionAmount()));
         }
-
-        transaction.setStatus(Status.SUCCESS);
-        return transactionRepository.save(transaction);
     }
 
-    private void validateTransaction(Transaction transaction, Card card, Account account) {
-        if (!cardService.isCardValid(card)) {
-            throw new RuntimeException("Invalid card");
+    private void validateTransaction(TransactionRequestDTO request, Card card, Account account) {
+        if (request.getTransactionAmount() == null || request.getTransactionAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidTransactionException("Invalid transaction amount");
         }
 
-        if (!accountService.isAccountActive(account)) {
-            throw new RuntimeException("Inactive account");
+        if (card.getAccount() == null || !card.getAccount().getId().equals(account.getId())) {
+            throw new InvalidTransactionException("Card not associated with account");
+        }
+        if (!cardService.isCardValid(card.getId())) {
+            throw new InvalidTransactionException("Invalid card");
         }
 
-        if (transaction.getTransactionType() == TransactionType.DEBIT &&
-                !accountService.hasSufficientBalance(account, transaction.getTransactionAmount())) {
-            throw new RuntimeException("Insufficient funds");
+        if (!accountService.isAccountActive(account.getId())) {
+            throw new InvalidTransactionException("Inactive account");
+        }
+
+        if (request.getTransactionType() == CommonEnum.TransactionType.DEBIT &&
+                !accountService.hasSufficientBalance(account.getId(), request.getTransactionAmount())) {
+            throw new InsufficientFundsException("Insufficient funds");
         }
     }
 }

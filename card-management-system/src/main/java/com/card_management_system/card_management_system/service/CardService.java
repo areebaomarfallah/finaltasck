@@ -1,70 +1,98 @@
 package com.card_management_system.card_management_system.service;
 
-import com.card_management_system.card_management_system.enume.Status_type;
-import com.card_management_system.card_management_system.Exception.CardNotFoundException;
-import com.card_management_system.card_management_system.Exception.InvalidCardStatusException;
-import com.card_management_system.card_management_system.model.*;
-import com.card_management_system.card_management_system.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.card_management_system.card_management_system.dto.CardRequestDTO;
+import com.card_management_system.card_management_system.dto.CardResponseDTO;
+import com.card_management_system.card_management_system.exception.CardNotFoundException;
+import com.card_management_system.card_management_system.exception.InvalidCardStatusException;
+import com.card_management_system.card_management_system.model.Account;
+import com.card_management_system.card_management_system.model.Card;
+import com.card_management_system.card_management_system.repository.CardRepository;
+import com.card_management_system.card_management_system.dto.converter.CardConverter;
+import com.card_management_system.card_management_system.utils.CommonEnum;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
-public class CardService {
+public  class CardService {
 
     private final CardRepository cardRepository;
     private final AccountService accountService;
+    private final CardConverter cardConverter;
+    public CardResponseDTO createCard(@Valid CardRequestDTO dto) {
+        Card card = cardConverter.toEntity(dto);
 
-    @Autowired
-    public CardService(CardRepository cardRepository, AccountService accountService) {
-        this.cardRepository = cardRepository;
-        this.accountService = accountService;
-    }
-
-    // Required by CardController
-    public Card createCard(Card card) {
-        if (card.getExpiry() == null) {
-            card.setExpiry(LocalDate.now().plusYears(2)); // Default 2 year expiry
+        if (card.getStatus() == null) {
+            card.setStatus(CommonEnum.StatusType.INACTIVE);
         }
-        card.setStatus(Status_type.INACTIVE); // New cards are inactive by default
-        return cardRepository.save(card);
+
+        Account account = accountService.getAccountEntity(dto.getAccountId());
+        card.setAccount(account);
+
+        if (card.getExpiry().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Card expiry date cannot be in the past");
+        }
+
+        return cardConverter.toDto(cardRepository.save(card));
     }
 
-    // Required by CardController
-    public Card updateStatus(UUID cardId, Status_type status) {
-        Card card = getCard(cardId);
+    public CardResponseDTO updateCardStatus(UUID cardId, String status) {
+        CommonEnum.StatusType newStatus;
+        try {
+            newStatus = CommonEnum.StatusType.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid status value: " + status);
+        }
 
-        // Validate status transition
-        if (card.getStatus() == Status_type.INACTIVE && status == Status_type.ACTIVE) {
+        Card card = getCardEntity(cardId);
+        validateStatusTransition(card, newStatus);
+
+        card.setStatus(newStatus);
+        return cardConverter.toDto(cardRepository.save(card));
+    }
+
+    // Enhanced status transition validation
+    private void validateStatusTransition(Card card, CommonEnum.StatusType newStatus) {
+        if (card.getStatus() == newStatus) {
+            return;
+        }
+
+        if (newStatus == CommonEnum.StatusType.ACTIVE) {
             if (card.getExpiry().isBefore(LocalDate.now())) {
                 throw new InvalidCardStatusException("Cannot activate expired card");
             }
+            if (!accountService.isAccountActive(card.getAccount().getId())) {
+                throw new InvalidCardStatusException("Cannot activate card for inactive account");
+            }
         }
-
-        card.setStatus(status);
-        return cardRepository.save(card);
     }
 
-    // Required by CardController
-    public Card getCard(UUID id) {
+    public CardResponseDTO getCardById(UUID id) {
+
+        return cardConverter.toDto(getCardEntity(id));
+    }
+
+    Card getCardByHash(String cardNumberHash) {
+        return cardRepository.findByCardNumber(cardNumberHash)
+                .orElseThrow(() -> new CardNotFoundException("Card not found with hash"));
+    }
+
+
+    private Card getCardEntity(UUID id) {
         return cardRepository.findById(id)
                 .orElseThrow(() -> new CardNotFoundException(id));
     }
 
-    // Existing methods
-    public Card getCardByHash(String cardNumberHash) {
-        return cardRepository.findByCardNumber(cardNumberHash)
-                .orElseThrow(() -> new RuntimeException("Card not found"));
-    }
-
-    public boolean isCardValid(Card card) {
-        return card != null &&
-                card.getStatus() == Status_type.ACTIVE &&
+    public boolean isCardValid(UUID cardId) {
+        Card card = getCardEntity(cardId);
+        return card.getStatus() == CommonEnum.StatusType.ACTIVE &&
                 !card.getExpiry().isBefore(LocalDate.now());
     }
+
 }
