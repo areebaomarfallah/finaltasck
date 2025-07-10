@@ -38,8 +38,7 @@ public  class CardService {
             card.setStatus(CommonEnum.StatusType.INACTIVE);
         }
 
-        Account account = accountService.getAccountEntity(dto.getAccountId());
-        card.setAccount(account);
+        card.setAccount(accountService.getAccountEntity(dto.getAccountId()));
 
         if (card.getExpiry().isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Card expiry date cannot be in the past");

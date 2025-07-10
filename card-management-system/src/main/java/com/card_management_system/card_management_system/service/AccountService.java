@@ -23,19 +23,16 @@ public class AccountService {
     private final AccountConverter accountConverter;
 
     public AccountResponseDTO createAccount(AccountRequestDTO dto) {
-        // Additional validation
         if (dto.getStatus() == null) {
             throw new IllegalArgumentException("Account status must be specified");
         }
 
-        Account account = accountConverter.toEntity(dto);
-        return accountConverter.toDto(accountRepository.save(account));
+        return accountConverter.toDto(accountRepository.save(accountConverter.toEntity(dto)));
     }
 
     public AccountResponseDTO updateAccount(UUID id, AccountRequestDTO dto) {
         Account account = getAccountEntity(id);
 
-        // Prevent null updates
         if (dto.getStatus() != null) {
             account.setStatus(dto.getStatus());
         }

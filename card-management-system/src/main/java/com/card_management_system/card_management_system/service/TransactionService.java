@@ -30,13 +30,11 @@ public  class TransactionService {
 
         Card card = cardService.getCardByHash(request.getCardNumberHash());
 
-        // Additional verification if needed
         if (!HashUtil.verifyCardNumber(request.getCardNumberHash(), card.getCardNumberHash())) {
             throw new InvalidTransactionException("Card verification failed");
         }
         Account account = card.getAccount();
 
-        // Essential validations
         if (!cardService.isCardValid(card.getId())) {
             throw new InvalidTransactionException("Invalid card");
         }
@@ -48,7 +46,6 @@ public  class TransactionService {
             throw new InsufficientFundsException("Insufficient funds");
         }
 
-        // Process transaction
         Transaction transaction = new Transaction();
         transaction.setTransactionAmount(request.getTransactionAmount());
         transaction.setTransactionType(request.getTransactionType());
@@ -56,7 +53,6 @@ public  class TransactionService {
         transaction.setCard(card);
         transaction.setStatus(CommonEnum.Status.SUCCESS);
 
-        // Update balance
         if (request.getTransactionType() == CommonEnum.TransactionType.DEBIT) {
             account.setBalance(account.getBalance().subtract(request.getTransactionAmount()));
         } else {
