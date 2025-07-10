@@ -27,11 +27,5 @@ public class TransactionConverter {
         return dto;
     }
 
-    public Transaction toEntity(TransactionRequestDTO dto) {
-        Transaction transaction = new Transaction();
-        transaction.setTransactionAmount(dto.getTransactionAmount());
-        transaction.setTransactionType(dto.getTransactionType());
-        transaction.setTransactionDate(LocalDateTime.now());
-        return transaction;
-    }
+
 }

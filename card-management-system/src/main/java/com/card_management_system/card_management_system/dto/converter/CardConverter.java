@@ -20,7 +20,7 @@ public class CardConverter {
         }
 
         CardResponseDTO dto = modelMapper.map(card, CardResponseDTO.class);
-        dto.setCardNumber(maskCardNumber(card.getCardNumber()));
+        dto.setCardNumber(maskCardNumber(card.getCardNumberHash()));
         dto.setAccountId(card.getAccount() != null ? card.getAccount().getId() : null);
         return dto;
     }
@@ -40,7 +40,7 @@ public class CardConverter {
     }
 
     private String maskCardNumber(String cardNumber) {
-        return "****-****-****-XXXX"; // If hashed, you can’t show real digits — only fake or fixed
+        return "****-****-****-" + cardNumber.substring(cardNumber.length() - 4);
     }
 
 }

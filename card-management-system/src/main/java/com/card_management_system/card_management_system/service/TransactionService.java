@@ -9,6 +9,7 @@ import com.card_management_system.card_management_system.model.*;
 import com.card_management_system.card_management_system.repository.TransactionRepository;
 import com.card_management_system.card_management_system.dto.converter.TransactionConverter;
 import com.card_management_system.card_management_system.utils.CommonEnum;
+import com.card_management_system.card_management_system.utils.HashUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +27,13 @@ public  class TransactionService {
     private final AccountService accountService;
     private final TransactionConverter transactionConverter;
     public TransactionResponseDTO processTransaction(TransactionRequestDTO request) {
+
         Card card = cardService.getCardByHash(request.getCardNumberHash());
+
+        // Additional verification if needed
+        if (!HashUtil.verifyCardNumber(request.getCardNumberHash(), card.getCardNumberHash())) {
+            throw new InvalidTransactionException("Card verification failed");
+        }
         Account account = card.getAccount();
 
         // Essential validations
@@ -58,36 +65,6 @@ public  class TransactionService {
 
         return transactionConverter.toDto(transactionRepository.save(transaction));
     }
-    private void processTransactionAmount(Transaction transaction, Account account) {
 
-        if (transaction.getTransactionType() == CommonEnum.TransactionType.DEBIT) {
 
-            account.setBalance(account.getBalance().subtract(transaction.getTransactionAmount()));
-
-        } else {
-            account.setBalance(account.getBalance().add(transaction.getTransactionAmount()));
-        }
-    }
-
-    private void validateTransaction(TransactionRequestDTO request, Card card, Account account) {
-        if (request.getTransactionAmount() == null || request.getTransactionAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new InvalidTransactionException("Invalid transaction amount");
-        }
-
-        if (card.getAccount() == null || !card.getAccount().getId().equals(account.getId())) {
-            throw new InvalidTransactionException("Card not associated with account");
-        }
-        if (!cardService.isCardValid(card.getId())) {
-            throw new InvalidTransactionException("Invalid card");
-        }
-
-        if (!accountService.isAccountActive(account.getId())) {
-            throw new InvalidTransactionException("Inactive account");
-        }
-
-        if (request.getTransactionType() == CommonEnum.TransactionType.DEBIT &&
-                !accountService.hasSufficientBalance(account.getId(), request.getTransactionAmount())) {
-            throw new InsufficientFundsException("Insufficient funds");
-        }
-    }
 }

@@ -9,6 +9,7 @@ import com.card_management_system.card_management_system.model.Card;
 import com.card_management_system.card_management_system.repository.CardRepository;
 import com.card_management_system.card_management_system.dto.converter.CardConverter;
 import com.card_management_system.card_management_system.utils.CommonEnum;
+import com.card_management_system.card_management_system.utils.HashUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,12 @@ public  class CardService {
     private final AccountService accountService;
     private final CardConverter cardConverter;
     public CardResponseDTO createCard(@Valid CardRequestDTO dto) {
+        if (!HashUtil.isValidCardNumberFormat(dto.getCardNumber())) {
+            throw new IllegalArgumentException("Invalid card number format");
+        }
+
         Card card = cardConverter.toEntity(dto);
+        card.setCardNumberHash(HashUtil.hashCardNumber(dto.getCardNumber()));
 
         if (card.getStatus() == null) {
             card.setStatus(CommonEnum.StatusType.INACTIVE);
@@ -78,9 +84,9 @@ public  class CardService {
         return cardConverter.toDto(getCardEntity(id));
     }
 
-    Card getCardByHash(String cardNumberHash) {
-        return cardRepository.findByCardNumber(cardNumberHash)
-                .orElseThrow(() -> new CardNotFoundException("Card not found with hash"));
+    public Card getCardByHash(String cardNumberHash) {
+        return cardRepository.findByCardNumberHash(cardNumberHash)
+                .orElseThrow(() -> new CardNotFoundException("Card not found"));
     }
 
 

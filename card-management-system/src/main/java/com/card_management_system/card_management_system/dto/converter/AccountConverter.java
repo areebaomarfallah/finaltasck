@@ -8,7 +8,6 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -36,16 +35,9 @@ public class AccountConverter {
             throw new IllegalArgumentException("Account balance cannot be negative");
         }
 
-        Account account = modelMapper.map(dto, Account.class);
-        return account;
+
+        return modelMapper.map(dto, Account.class);
     }
 
-    public void updateEntity(AccountRequestDTO dto, Account account) {
-        if (dto == null || account == null) {
-            throw new IllegalArgumentException("DTO and Account cannot be null for update");
-        }
 
-        modelMapper.getConfiguration().setSkipNullEnabled(true);
-        modelMapper.map(dto, account);
-    }
 }

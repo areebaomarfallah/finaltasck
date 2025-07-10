@@ -14,7 +14,7 @@ public class Card {
     private UUID id;
 
     @Column(nullable = false, unique = true)
-    private String cardNumber;
+    private String cardNumberHash;
 
     @Column(nullable = false)
     private LocalDate expiry;
