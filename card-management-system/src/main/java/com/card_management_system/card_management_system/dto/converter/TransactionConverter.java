@@ -15,7 +15,6 @@ public class TransactionConverter {
 
     private final ModelMapper modelMapper;
 
-
     public TransactionResponseDTO toDto(Transaction transaction) {
         TransactionResponseDTO dto = new TransactionResponseDTO();
         dto.setId(transaction.getId());
@@ -24,6 +23,7 @@ public class TransactionConverter {
         dto.setTransactionType(transaction.getTransactionType());
         dto.setStatus(transaction.getStatus());
         dto.setCardId(transaction.getCard().getId());
+
         return dto;
     }
 

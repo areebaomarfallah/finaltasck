@@ -7,7 +7,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.UUID;
 
 @RestController
@@ -20,6 +19,7 @@ public class AccountController {
     @PostMapping
     public ResponseEntity<AccountResponseDTO> createAccount(
             @Valid @RequestBody AccountRequestDTO dto) {
+
         return ResponseEntity.status(201).body(accountService.createAccount(dto));
     }
 
@@ -27,11 +27,13 @@ public class AccountController {
     public ResponseEntity<AccountResponseDTO> updateAccount(
             @PathVariable UUID id,
             @Valid @RequestBody AccountRequestDTO dto) {
+
         return ResponseEntity.ok(accountService.updateAccount(id, dto));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AccountResponseDTO> getAccount(@PathVariable UUID id) {
+
         return ResponseEntity.ok(accountService.getAccountById(id));
     }
 }

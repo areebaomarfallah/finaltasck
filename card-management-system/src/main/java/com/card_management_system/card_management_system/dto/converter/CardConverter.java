@@ -22,6 +22,7 @@ public class CardConverter {
         CardResponseDTO dto = modelMapper.map(card, CardResponseDTO.class);
         dto.setCardNumber(maskCardNumber(card.getCardNumberHash()));
         dto.setAccountId(card.getAccount() != null ? card.getAccount().getId() : null);
+
         return dto;
     }
 

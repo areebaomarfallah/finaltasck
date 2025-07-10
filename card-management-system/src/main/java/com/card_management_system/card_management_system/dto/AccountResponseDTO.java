@@ -2,7 +2,6 @@ package com.card_management_system.card_management_system.dto;
 
 import java.math.BigDecimal;
 import java.util.UUID;
-
 import com.card_management_system.card_management_system.utils.CommonEnum;
 import lombok.Getter;
 import lombok.Setter;

@@ -17,6 +17,7 @@ public class CardController {
     @PostMapping
     public ResponseEntity<CardResponseDTO> createCard(
           @RequestBody CardRequestDTO dto) {
+
         return ResponseEntity.status(201).body(cardService.createCard(dto));
     }
 
@@ -24,11 +25,13 @@ public class CardController {
     public ResponseEntity<CardResponseDTO> updateCardStatus(
             @PathVariable UUID id,
             @RequestParam @NotBlank String status) {
+
         return ResponseEntity.ok(cardService.updateCardStatus(id, status));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<CardResponseDTO> getCard(@PathVariable UUID id) {
+
         return ResponseEntity.ok(cardService.getCardById(id));
     }
 }

@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.util.UUID;
+
 @Entity
 @Data
 public class Card {

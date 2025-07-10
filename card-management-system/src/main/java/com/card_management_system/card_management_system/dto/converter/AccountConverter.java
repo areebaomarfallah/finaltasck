@@ -19,14 +19,17 @@ public class AccountConverter {
         if (account == null) {
             throw new IllegalArgumentException("Account cannot be null");
         }
+
         return modelMapper.map(account, AccountResponseDTO.class);
     }
+
+
+
     public Account toEntity(AccountRequestDTO dto) {
         if (dto == null) {
             throw new IllegalArgumentException("AccountRequestDTO cannot be null");
         }
 
-        // Add null check for balance before comparison
         if (dto.getBalance() == null) {
             throw new IllegalArgumentException("Account balance cannot be null");
         }

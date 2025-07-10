@@ -4,7 +4,6 @@ import com.card_management_system.card_management_system.dto.CardRequestDTO;
 import com.card_management_system.card_management_system.dto.CardResponseDTO;
 import com.card_management_system.card_management_system.exception.CardNotFoundException;
 import com.card_management_system.card_management_system.exception.InvalidCardStatusException;
-import com.card_management_system.card_management_system.model.Account;
 import com.card_management_system.card_management_system.model.Card;
 import com.card_management_system.card_management_system.repository.CardRepository;
 import com.card_management_system.card_management_system.dto.converter.CardConverter;
@@ -14,7 +13,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -62,7 +60,6 @@ public  class CardService {
         return cardConverter.toDto(cardRepository.save(card));
     }
 
-    // Enhanced status transition validation
     private void validateStatusTransition(Card card, CommonEnum.StatusType newStatus) {
         if (card.getStatus() == newStatus) {
             return;

@@ -10,7 +10,6 @@ import com.card_management_system.card_management_system.utils.CommonEnum;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -47,6 +46,7 @@ public class AccountService {
     }
 
     public AccountResponseDTO getAccountById(UUID id) {
+
         return accountConverter.toDto(getAccountEntity(id));
     }
 
