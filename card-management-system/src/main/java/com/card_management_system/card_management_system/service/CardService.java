@@ -9,11 +9,11 @@ import com.card_management_system.card_management_system.repository.CardReposito
 import com.card_management_system.card_management_system.dto.converter.CardConverter;
 import com.card_management_system.card_management_system.utils.CommonEnum;
 import com.card_management_system.card_management_system.utils.HashUtil;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -24,13 +24,15 @@ public  class CardService {
     private final CardRepository cardRepository;
     private final AccountService accountService;
     private final CardConverter cardConverter;
-    public CardResponseDTO createCard(@Valid CardRequestDTO dto) {
-        if (!HashUtil.isValidCardNumberFormat(dto.getCardNumber())) {
+    private final HashUtil hashUtil;
+
+    public CardResponseDTO createCard(CardRequestDTO dto) {
+        if (!hashUtil.isValidCardNumberFormat(dto.getCardNumber())) {
             throw new IllegalArgumentException("Invalid card number format");
         }
 
         Card card = cardConverter.toEntity(dto);
-        card.setCardNumberHash(HashUtil.hashCardNumber(dto.getCardNumber()));
+        card.setCardNumberHash(hashUtil.hashCardNumber(dto.getCardNumber()));
 
         if (card.getStatus() == null) {
             card.setStatus(CommonEnum.StatusType.INACTIVE);
@@ -44,6 +46,7 @@ public  class CardService {
 
         return cardConverter.toDto(cardRepository.save(card));
     }
+
 
     public CardResponseDTO updateCardStatus(UUID cardId, String status) {
         CommonEnum.StatusType newStatus;
@@ -96,5 +99,9 @@ public  class CardService {
         return card.getStatus() == CommonEnum.StatusType.ACTIVE &&
                 !card.getExpiry().isBefore(LocalDate.now());
     }
-
+    public Optional<Card> findCardByNumberVerification(String cleanedCardNumber) {
+        return cardRepository.findAll().stream()
+                .filter(c -> hashUtil.verifyCardNumber(cleanedCardNumber, c.getCardNumberHash()))
+                .findFirst();
+    }
 }

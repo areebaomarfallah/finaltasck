@@ -10,6 +10,5 @@ import java.util.UUID;
 
 @Repository
 public interface CardRepository extends JpaRepository<Card, UUID> {
-    Optional<Card> findByCardNumberHash(String cardNumberHash); // Updated method name
+    Optional<Card> findByCardNumberHash(String cardNumberHash);
 }
-

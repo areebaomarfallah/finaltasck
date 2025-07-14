@@ -3,11 +3,13 @@ package com.card_management_system.card_management_system.controller;
 import com.card_management_system.card_management_system.dto.CardRequestDTO;
 import com.card_management_system.card_management_system.dto.CardResponseDTO;
 import com.card_management_system.card_management_system.service.CardService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/cards")
@@ -16,8 +18,7 @@ public class CardController {
 
     @PostMapping
     public ResponseEntity<CardResponseDTO> createCard(
-          @RequestBody CardRequestDTO dto) {
-
+            @Valid @RequestBody CardRequestDTO dto) {
         return ResponseEntity.status(201).body(cardService.createCard(dto));
     }
 

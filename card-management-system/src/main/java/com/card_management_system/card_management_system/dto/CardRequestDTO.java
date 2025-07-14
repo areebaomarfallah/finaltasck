@@ -15,12 +15,11 @@ public class CardRequestDTO {
 
 
     @NotNull(message = "Expiry date is required")
-    @Future(message = "Expiry date must be in the future")
     private LocalDate expiry;
 
     @NotNull(message = "Card number is required")
     @Size(min = 13, max = 19, message = "Card number must be between 13 and 19 digits")
-    @Pattern(regexp = "^\\d+$", message = "Card number must contain only digits")
+    @Pattern(regexp = "^[0-9]+$", message = "Card number must contain only digits")
     private String cardNumber;
 
     @NotNull(message = "Account ID is required")

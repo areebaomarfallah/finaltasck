@@ -18,6 +18,6 @@ public class TransactionRequestDTO {
     @NotNull(message = "Transaction type is required")
     private CommonEnum.TransactionType transactionType;
 
-    @NotBlank(message = "Card number hash is required")
-    private String cardNumberHash;
+    @NotBlank(message = "Card number is required")
+    private String cardNumber;
 }

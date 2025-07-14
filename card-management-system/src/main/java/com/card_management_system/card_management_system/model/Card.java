@@ -2,13 +2,15 @@ package com.card_management_system.card_management_system.model;
 
 import com.card_management_system.card_management_system.utils.CommonEnum;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Data
+@Getter
+@Setter
 public class Card {
     @Id
     @GeneratedValue

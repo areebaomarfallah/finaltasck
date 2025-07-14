@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 
 @Component
 @RequiredArgsConstructor
@@ -20,9 +19,8 @@ public class CardConverter {
         }
 
         CardResponseDTO dto = modelMapper.map(card, CardResponseDTO.class);
-        dto.setCardNumber(maskCardNumber(card.getCardNumberHash()));
+        dto.setCardNumber(maskCardNumber(card.getCardNumberHash())); // Still return masked number
         dto.setAccountId(card.getAccount() != null ? card.getAccount().getId() : null);
-
         return dto;
     }
 
@@ -32,14 +30,9 @@ public class CardConverter {
         }
 
         Card card = modelMapper.map(dto, Card.class);
-
-        if (card.getExpiry() == null) {
-            card.setExpiry(LocalDate.now().plusYears(2));
-        }
-
+        card.setCardNumberHash(null);
         return card;
     }
-
     private String maskCardNumber(String cardNumber) {
         return "****-****-****-" + cardNumber.substring(cardNumber.length() - 4);
     }

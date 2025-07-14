@@ -22,9 +22,6 @@ public class AccountService {
     private final AccountConverter accountConverter;
 
     public AccountResponseDTO createAccount(AccountRequestDTO dto) {
-        if (dto.getStatus() == null) {
-            throw new IllegalArgumentException("Account status must be specified");
-        }
 
         return accountConverter.toDto(accountRepository.save(accountConverter.toEntity(dto)));
     }
@@ -36,9 +33,7 @@ public class AccountService {
             account.setStatus(dto.getStatus());
         }
         if (dto.getBalance() != null) {
-            if (dto.getBalance().compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("Balance cannot be negative");
-            }
+
             account.setBalance(dto.getBalance());
         }
 

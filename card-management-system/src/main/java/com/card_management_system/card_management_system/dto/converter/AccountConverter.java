@@ -26,18 +26,10 @@ public class AccountConverter {
 
 
     public Account toEntity(AccountRequestDTO dto) {
+
         if (dto == null) {
             throw new IllegalArgumentException("AccountRequestDTO cannot be null");
         }
-
-        if (dto.getBalance() == null) {
-            throw new IllegalArgumentException("Account balance cannot be null");
-        }
-
-        if (dto.getBalance().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Account balance cannot be negative");
-        }
-
 
         return modelMapper.map(dto, Account.class);
     }

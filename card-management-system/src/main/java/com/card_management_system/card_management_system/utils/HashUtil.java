@@ -1,42 +1,41 @@
 package com.card_management_system.card_management_system.utils;
 
 import org.springframework.security.crypto.bcrypt.BCrypt;
+import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 
+
+
+@Component
 public class HashUtil {
     private static final int BCRYPT_STRENGTH = 12;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    public static String hashCardNumber(String cardNumber) {
+    public String cleanCardNumber(String cardNumber) {
         if (cardNumber == null || cardNumber.trim().isEmpty()) {
             throw new IllegalArgumentException("Card number cannot be null or empty");
         }
-        return BCrypt.hashpw(cardNumber, BCrypt.gensalt(BCRYPT_STRENGTH, SECURE_RANDOM));
+        // Remove all non-digit characters and trim whitespace
+        return cardNumber.replaceAll("[^0-9]", "").trim();
     }
 
-    public static boolean verifyCardNumber(String cardNumber, String hashedCardNumber) {
-        return cardNumber != null &&
-                hashedCardNumber != null &&
-                BCrypt.checkpw(cardNumber, hashedCardNumber);
+    public String hashCardNumber(String cardNumber) {
+        String cleaned = cleanCardNumber(cardNumber);
+        return BCrypt.hashpw(cleaned, BCrypt.gensalt(BCRYPT_STRENGTH, SECURE_RANDOM));
     }
 
-    public static boolean isValidCardNumberFormat(String cardNumber) {
-        if (cardNumber == null || cardNumber.length() < 13 || cardNumber.length() > 19) {
+    public boolean verifyCardNumber(String inputCardNumber, String hashedCardNumber) {
+        try {
+            String cleanedInput = cleanCardNumber(inputCardNumber);
+            return BCrypt.checkpw(cleanedInput, hashedCardNumber);
+        } catch (Exception e) {
             return false;
         }
+    }
 
-        int sum = 0;
-        boolean alternate = false;
-        for (int i = cardNumber.length() - 1; i >= 0; i--) {
-            int n = Integer.parseInt(cardNumber.substring(i, i + 1));
-            if (alternate) {
-                n *= 2;
-                if (n > 9) n = (n % 10) + 1;
-            }
-            sum += n;
-            alternate = !alternate;
-        }
-        return (sum % 10 == 0);
+    public boolean isValidCardNumberFormat(String cardNumber) {
+        String cleaned = cleanCardNumber(cardNumber);
+        return cleaned.length() >= 13 && cleaned.length() <= 19;
     }
 }
