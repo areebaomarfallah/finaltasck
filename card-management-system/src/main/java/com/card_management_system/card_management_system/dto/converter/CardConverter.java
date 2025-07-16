@@ -11,16 +11,19 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class CardConverter {
+
     private final ModelMapper modelMapper;
 
     public CardResponseDTO toDto(Card card) {
+
         if (card == null) {
             throw new IllegalArgumentException("Card cannot be null");
         }
 
         CardResponseDTO dto = modelMapper.map(card, CardResponseDTO.class);
-        dto.setCardNumber(maskCardNumber(card.getCardNumberHash())); // Still return masked number
+        dto.setCardNumber(maskCardNumber(card.getCardNumberHash()));
         dto.setAccountId(card.getAccount() != null ? card.getAccount().getId() : null);
+
         return dto;
     }
 
@@ -29,12 +32,14 @@ public class CardConverter {
             throw new IllegalArgumentException("CardRequestDTO cannot be null");
         }
 
-        Card card = modelMapper.map(dto, Card.class);
-        card.setCardNumberHash(null);
-        return card;
+        modelMapper.map(dto, Card.class).setCardNumberHash(null);
+
+        return modelMapper.map(dto, Card.class);
     }
     private String maskCardNumber(String cardNumber) {
+
         return "****-****-****-" + cardNumber.substring(cardNumber.length() - 4);
+
     }
 
 }

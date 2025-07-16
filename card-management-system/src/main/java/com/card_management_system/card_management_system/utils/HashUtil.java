@@ -16,26 +16,29 @@ public class HashUtil {
         if (cardNumber == null || cardNumber.trim().isEmpty()) {
             throw new IllegalArgumentException("Card number cannot be null or empty");
         }
-        // Remove all non-digit characters and trim whitespace
         return cardNumber.replaceAll("[^0-9]", "").trim();
     }
 
     public String hashCardNumber(String cardNumber) {
-        String cleaned = cleanCardNumber(cardNumber);
-        return BCrypt.hashpw(cleaned, BCrypt.gensalt(BCRYPT_STRENGTH, SECURE_RANDOM));
+
+        return BCrypt.hashpw(cleanCardNumber(cardNumber), BCrypt.gensalt(BCRYPT_STRENGTH, SECURE_RANDOM));
+
     }
 
     public boolean verifyCardNumber(String inputCardNumber, String hashedCardNumber) {
         try {
-            String cleanedInput = cleanCardNumber(inputCardNumber);
-            return BCrypt.checkpw(cleanedInput, hashedCardNumber);
+
+            return BCrypt.checkpw(cleanCardNumber(inputCardNumber), hashedCardNumber);
+
         } catch (Exception e) {
+
             return false;
         }
     }
 
     public boolean isValidCardNumberFormat(String cardNumber) {
-        String cleaned = cleanCardNumber(cardNumber);
-        return cleaned.length() >= 13 && cleaned.length() <= 19;
+
+        return cleanCardNumber(cardNumber).length() >= 13 && cleanCardNumber(cardNumber).length() <= 19;
+
     }
 }

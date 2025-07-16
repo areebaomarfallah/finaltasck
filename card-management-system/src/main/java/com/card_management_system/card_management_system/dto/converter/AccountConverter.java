@@ -23,8 +23,6 @@ public class AccountConverter {
         return modelMapper.map(account, AccountResponseDTO.class);
     }
 
-
-
     public Account toEntity(AccountRequestDTO dto) {
 
         if (dto == null) {

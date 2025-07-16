@@ -17,20 +17,29 @@ public class TransactionConverter {
 
     private final ModelMapper modelMapper;
 
-
     public TransactionResponseDTO toDto(Transaction transaction) {
-        TransactionResponseDTO dto = modelMapper.map(transaction, TransactionResponseDTO.class);
-        dto.setCardId(transaction.getCard().getId());
-        return dto;
+        modelMapper.typeMap(Transaction.class, TransactionResponseDTO.class)
+                .addMappings(mapper -> mapper.map(src -> src.getCard().getId(),
+                        TransactionResponseDTO::setCardId));
+
+        return modelMapper.map(transaction, TransactionResponseDTO.class);
     }
 
     public Transaction toEntity(TransactionRequestDTO request, Card card) {
-        Transaction transaction = new Transaction();
-        transaction.setTransactionAmount(request.getTransactionAmount());
-        transaction.setTransactionType(request.getTransactionType());
+
+        modelMapper.typeMap(TransactionRequestDTO.class, Transaction.class)
+
+                .addMappings(mapper -> {
+                    mapper.skip(Transaction::setId);
+                    mapper.skip(Transaction::setTransactionDate);
+                    mapper.skip(Transaction::setStatus);
+                });
+
+        Transaction transaction = modelMapper.map(request, Transaction.class);
         transaction.setTransactionDate(LocalDateTime.now());
         transaction.setCard(card);
         transaction.setStatus(CommonEnum.Status.SUCCESS);
+
         return transaction;
     }
 }

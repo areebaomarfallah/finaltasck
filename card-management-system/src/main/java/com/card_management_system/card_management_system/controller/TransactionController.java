@@ -12,11 +12,13 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/api/transactions")
 public class TransactionController {
+
     private final TransactionService transactionService;
 
     @PostMapping
     public ResponseEntity<TransactionResponseDTO> processTransaction(
             @Valid @RequestBody TransactionRequestDTO request) {
+
         return ResponseEntity.ok(transactionService.processTransaction(request));
     }
 }

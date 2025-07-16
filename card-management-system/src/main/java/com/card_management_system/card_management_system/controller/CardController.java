@@ -14,11 +14,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/api/cards")
 public class CardController {
+
     private final CardService cardService;
 
     @PostMapping
     public ResponseEntity<CardResponseDTO> createCard(
             @Valid @RequestBody CardRequestDTO dto) {
+
         return ResponseEntity.status(201).body(cardService.createCard(dto));
     }
 

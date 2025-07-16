@@ -83,10 +83,6 @@ public  class CardService {
         return cardConverter.toDto(getCardEntity(id));
     }
 
-    public Card getCardByHash(String cardNumberHash) {
-        return cardRepository.findByCardNumberHash(cardNumberHash)
-                .orElseThrow(() -> new CardNotFoundException("Card not found"));
-    }
 
 
     private Card getCardEntity(UUID id) {

@@ -1,6 +1,5 @@
 package com.card_management_system.card_management_system.service;
 
-import com.card_management_system.card_management_system.exception.CardNotFoundException;
 import com.card_management_system.card_management_system.exception.InsufficientFundsException;
 import com.card_management_system.card_management_system.exception.InvalidTransactionException;
 import com.card_management_system.card_management_system.dto.TransactionRequestDTO;
@@ -27,14 +26,11 @@ public class TransactionService {
 
     public TransactionResponseDTO processTransaction(TransactionRequestDTO request) {
         try {
-            // Clean the card number by removing non-digit characters
             String cleanedCardNumber = request.getCardNumber().replaceAll("[^0-9]", "");
 
-            // Find card by verifying against all cards
             Card card = cardService.findCardByNumberVerification(cleanedCardNumber)
                     .orElseThrow(() -> new InvalidTransactionException("Card not found"));
 
-            // Verify card number matches stored hash
             if (!hashUtil.verifyCardNumber(cleanedCardNumber, card.getCardNumberHash())) {
                 throw new InvalidTransactionException("Card verification failed");
             }
@@ -52,7 +48,6 @@ public class TransactionService {
                 throw new InsufficientFundsException("Insufficient funds");
             }
 
-            Transaction transaction = transactionConverter.toEntity(request, card);
 
             if (request.getTransactionType() == CommonEnum.TransactionType.DEBIT) {
                 account.setBalance(account.getBalance().subtract(request.getTransactionAmount()));
@@ -60,10 +55,10 @@ public class TransactionService {
                 account.setBalance(account.getBalance().add(request.getTransactionAmount()));
             }
 
-            return transactionConverter.toDto(transactionRepository.save(transaction));
+            return transactionConverter.toDto(transactionRepository.save(transactionConverter.toEntity(request, card)));
 
         } catch (InvalidTransactionException | InsufficientFundsException e) {
-            throw e; // Re-throw business exceptions
+            throw e;
         } catch (Exception e) {
             throw new InvalidTransactionException("Transaction processing failed: " + e.getMessage());
         }
