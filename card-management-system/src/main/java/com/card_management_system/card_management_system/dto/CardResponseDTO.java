@@ -9,18 +9,13 @@ import java.util.UUID;
 @Getter
 @Setter
 public class CardResponseDTO {
-
     private UUID id;
-
     private CommonEnum.StatusType status;
-
     private LocalDate expiry;
-
-    private String cardNumber;
-
+    private String cardHashNumber;
+    private String lastFourDigits;
     private UUID accountId;
-
-
-
-
 }
+
+
+

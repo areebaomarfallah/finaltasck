@@ -8,7 +8,7 @@ import com.card_management_system.card_management_system.model.Card;
 import com.card_management_system.card_management_system.repository.CardRepository;
 import com.card_management_system.card_management_system.dto.converter.CardConverter;
 import com.card_management_system.card_management_system.utils.CommonEnum;
-import com.card_management_system.card_management_system.utils.HashUtil;
+import com.card_management_system.card_management_system.utils.CardUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,34 +19,26 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public  class CardService {
+public class CardService {
 
     private final CardRepository cardRepository;
     private final AccountService accountService;
     private final CardConverter cardConverter;
-    private final HashUtil hashUtil;
+    private final CardUtil cardUtil;
 
     public CardResponseDTO createCard(CardRequestDTO dto) {
-        if (!hashUtil.isValidCardNumberFormat(dto.getCardNumber())) {
-            throw new IllegalArgumentException("Invalid card number format");
-        }
-
         Card card = cardConverter.toEntity(dto);
-        card.setCardNumberHash(hashUtil.hashCardNumber(dto.getCardNumber()));
+
+        card.setExpiry(LocalDate.now().plusYears(5));
+
+        card.setAccount(accountService.getAccountEntity(dto.getAccountId()));
 
         if (card.getStatus() == null) {
             card.setStatus(CommonEnum.StatusType.INACTIVE);
         }
 
-        card.setAccount(accountService.getAccountEntity(dto.getAccountId()));
-
-        if (card.getExpiry().isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("Card expiry date cannot be in the past");
-        }
-
         return cardConverter.toDto(cardRepository.save(card));
     }
-
 
     public CardResponseDTO updateCardStatus(UUID cardId, String status) {
         CommonEnum.StatusType newStatus;
@@ -97,7 +89,7 @@ public  class CardService {
     }
     public Optional<Card> findCardByNumberVerification(String cleanedCardNumber) {
         return cardRepository.findAll().stream()
-                .filter(c -> hashUtil.verifyCardNumber(cleanedCardNumber, c.getCardNumberHash()))
+                .filter(c -> cardUtil.verifyCardNumber(cleanedCardNumber, c.getCardNumberHash()))
                 .findFirst();
     }
 }

@@ -19,5 +19,5 @@ public class TransactionRequestDTO {
     private CommonEnum.TransactionType transactionType;
 
     @NotBlank(message = "Card number is required")
-    private String cardNumber;
+    private String cardNumberHash;
 }

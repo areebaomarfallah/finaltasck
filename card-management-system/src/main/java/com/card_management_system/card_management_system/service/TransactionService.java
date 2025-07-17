@@ -5,10 +5,11 @@ import com.card_management_system.card_management_system.exception.InvalidTransa
 import com.card_management_system.card_management_system.dto.TransactionRequestDTO;
 import com.card_management_system.card_management_system.dto.TransactionResponseDTO;
 import com.card_management_system.card_management_system.model.*;
+import com.card_management_system.card_management_system.repository.CardRepository;
 import com.card_management_system.card_management_system.repository.TransactionRepository;
 import com.card_management_system.card_management_system.dto.converter.TransactionConverter;
 import com.card_management_system.card_management_system.utils.CommonEnum;
-import com.card_management_system.card_management_system.utils.HashUtil;
+import com.card_management_system.card_management_system.utils.CardUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,18 +23,12 @@ public class TransactionService {
     private final CardService cardService;
     private final AccountService accountService;
     private final TransactionConverter transactionConverter;
-    private final HashUtil hashUtil;
+    private final CardRepository cardRepository;
 
     public TransactionResponseDTO processTransaction(TransactionRequestDTO request) {
         try {
-            String cleanedCardNumber = request.getCardNumber().replaceAll("[^0-9]", "");
-
-            Card card = cardService.findCardByNumberVerification(cleanedCardNumber)
+            Card card = cardRepository.findByCardNumberHash(request.getCardNumberHash())
                     .orElseThrow(() -> new InvalidTransactionException("Card not found"));
-
-            if (!hashUtil.verifyCardNumber(cleanedCardNumber, card.getCardNumberHash())) {
-                throw new InvalidTransactionException("Card verification failed");
-            }
 
             Account account = card.getAccount();
 

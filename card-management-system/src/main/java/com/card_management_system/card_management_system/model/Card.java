@@ -19,6 +19,9 @@ public class Card {
     @Column(nullable = false, unique = true)
     private String cardNumberHash;
 
+    @Column(nullable = false, length = 4)
+    private String lastFourDigits;
+
     @Column(nullable = false)
     private LocalDate expiry;
 
