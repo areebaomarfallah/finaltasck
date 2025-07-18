@@ -24,22 +24,29 @@ public class CardService {
     private final CardRepository cardRepository;
     private final AccountService accountService;
     private final CardConverter cardConverter;
-    private final CardUtil cardUtil;
-
+    private final   CardUtil   cardUtil;
     public CardResponseDTO createCard(CardRequestDTO dto) {
+        // Generate card details
+        String generatedCardNumber = cardUtil.generateValidCardNumber();
+        String lastFour = generatedCardNumber.substring(generatedCardNumber.length() - 4);
+
         Card card = cardConverter.toEntity(dto);
 
+        card.setCardNumberHash(cardUtil.hashCardNumber(generatedCardNumber));
+        card.setLastFourDigits(lastFour);
         card.setExpiry(LocalDate.now().plusYears(5));
 
+        // Set account
         card.setAccount(accountService.getAccountEntity(dto.getAccountId()));
 
+        // Set default status if null
         if (card.getStatus() == null) {
             card.setStatus(CommonEnum.StatusType.INACTIVE);
         }
 
+        // Save and return
         return cardConverter.toDto(cardRepository.save(card));
     }
-
     public CardResponseDTO updateCardStatus(UUID cardId, String status) {
         CommonEnum.StatusType newStatus;
         try {
@@ -87,9 +94,8 @@ public class CardService {
         return card.getStatus() == CommonEnum.StatusType.ACTIVE &&
                 !card.getExpiry().isBefore(LocalDate.now());
     }
-    public Optional<Card> findCardByNumberVerification(String cleanedCardNumber) {
-        return cardRepository.findAll().stream()
-                .filter(c -> cardUtil.verifyCardNumber(cleanedCardNumber, c.getCardNumberHash()))
-                .findFirst();
+    public Optional<Card> findByCardNumberHash(String cardNumberHash) {
+        return cardRepository.findByCardNumberHash(cardNumberHash);
     }
+
 }

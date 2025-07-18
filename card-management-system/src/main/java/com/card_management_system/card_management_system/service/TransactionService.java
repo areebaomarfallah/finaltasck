@@ -9,7 +9,6 @@ import com.card_management_system.card_management_system.repository.CardReposito
 import com.card_management_system.card_management_system.repository.TransactionRepository;
 import com.card_management_system.card_management_system.dto.converter.TransactionConverter;
 import com.card_management_system.card_management_system.utils.CommonEnum;
-import com.card_management_system.card_management_system.utils.CardUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +22,10 @@ public class TransactionService {
     private final CardService cardService;
     private final AccountService accountService;
     private final TransactionConverter transactionConverter;
-    private final CardRepository cardRepository;
 
     public TransactionResponseDTO processTransaction(TransactionRequestDTO request) {
         try {
-            Card card = cardRepository.findByCardNumberHash(request.getCardNumberHash())
+            Card card = cardService.findByCardNumberHash(request.getCardNumberHash())
                     .orElseThrow(() -> new InvalidTransactionException("Card not found"));
 
             Account account = card.getAccount();

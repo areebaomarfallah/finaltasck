@@ -19,28 +19,13 @@ public class CardConverter {
         if (card == null) {
             throw new IllegalArgumentException("Card cannot be null");
         }
-
-        CardResponseDTO dto = modelMapper.map(card, CardResponseDTO.class);
-        dto.setCardHashNumber(card.getCardNumberHash());
-        dto.setLastFourDigits(card.getLastFourDigits());
-        dto.setAccountId(card.getAccount() != null ? card.getAccount().getId() : null);
-
-        return dto;
+        return modelMapper.map(card, CardResponseDTO.class);
     }
 
     public Card toEntity(CardRequestDTO dto) {
         if (dto == null) {
             throw new IllegalArgumentException("CardRequestDTO cannot be null");
         }
-
-        // Generate a new card number
-        String generatedCardNumber = cardUtil.generateValidCardNumber();
-        String lastFour = generatedCardNumber.substring(generatedCardNumber.length() - 4);
-
-        Card card = modelMapper.map(dto, Card.class);
-        card.setCardNumberHash(cardUtil.hashCardNumber(generatedCardNumber));
-        card.setLastFourDigits(lastFour);
-
-        return card;
+        return modelMapper.map(dto, Card.class);
     }
 }
