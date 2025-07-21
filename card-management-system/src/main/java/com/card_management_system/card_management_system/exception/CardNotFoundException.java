@@ -4,10 +4,7 @@ import java.util.UUID;
 
 public class CardNotFoundException extends RuntimeException {
 
-    public CardNotFoundException(String message) {
 
-        super(message);
-    }
 
     public CardNotFoundException(UUID cardId) {
 

@@ -53,16 +53,7 @@ public class CardService {
     public CardResponseDTO getCardById(UUID id) {
         return cardConverter.toDto(getCardEntity(id));
     }
-    private CardResponseDTO convertToResponseDTO(Card card) {
-        CardResponseDTO response = new CardResponseDTO();
-        response.setId(card.getId());
-        response.setStatus(card.getStatus());
-        response.setExpiry(card.getExpiry());
-        response.setCardNumberHash(card.getCardNumberHash());
-        response.setLastFourDigits(card.getLastFourDigits());
-        response.setAccountId(card.getAccount().getId());
-        return response;
-    }
+
 
     public CardResponseDTO updateCardStatus(UUID cardId, String status) {
         CommonEnum.StatusType newStatus;
