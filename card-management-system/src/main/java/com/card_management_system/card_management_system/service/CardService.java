@@ -20,23 +20,25 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class CardService {
-
     private final CardRepository cardRepository;
     private final AccountService accountService;
     private final CardConverter cardConverter;
-    private final   CardUtil   cardUtil;
+    private final CardUtil cardUtil;
+
     public CardResponseDTO createCard(CardRequestDTO dto) {
+        if (!accountService.accountExists(dto.getAccountId())) {
+            throw new IllegalArgumentException("Account does not exist");
+        }
+
         // Generate card details
         String generatedCardNumber = cardUtil.generateValidCardNumber();
         String lastFour = generatedCardNumber.substring(generatedCardNumber.length() - 4);
 
+        // Create entity
         Card card = cardConverter.toEntity(dto);
-
         card.setCardNumberHash(cardUtil.hashCardNumber(generatedCardNumber));
         card.setLastFourDigits(lastFour);
         card.setExpiry(LocalDate.now().plusYears(5));
-
-        // Set account
         card.setAccount(accountService.getAccountEntity(dto.getAccountId()));
 
         // Set default status if null
@@ -44,9 +46,24 @@ public class CardService {
             card.setStatus(CommonEnum.StatusType.INACTIVE);
         }
 
-        // Save and return
+        // Save and convert
         return cardConverter.toDto(cardRepository.save(card));
     }
+
+    public CardResponseDTO getCardById(UUID id) {
+        return cardConverter.toDto(getCardEntity(id));
+    }
+    private CardResponseDTO convertToResponseDTO(Card card) {
+        CardResponseDTO response = new CardResponseDTO();
+        response.setId(card.getId());
+        response.setStatus(card.getStatus());
+        response.setExpiry(card.getExpiry());
+        response.setCardNumberHash(card.getCardNumberHash());
+        response.setLastFourDigits(card.getLastFourDigits());
+        response.setAccountId(card.getAccount().getId());
+        return response;
+    }
+
     public CardResponseDTO updateCardStatus(UUID cardId, String status) {
         CommonEnum.StatusType newStatus;
         try {
@@ -77,10 +94,6 @@ public class CardService {
         }
     }
 
-    public CardResponseDTO getCardById(UUID id) {
-
-        return cardConverter.toDto(getCardEntity(id));
-    }
 
 
 

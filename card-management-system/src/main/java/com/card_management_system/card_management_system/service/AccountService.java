@@ -7,6 +7,7 @@ import com.card_management_system.card_management_system.model.Account;
 import com.card_management_system.card_management_system.repository.AccountRepository;
 import com.card_management_system.card_management_system.dto.converter.AccountConverter;
 import com.card_management_system.card_management_system.utils.CommonEnum;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,5 +57,10 @@ public class AccountService {
     Account getAccountEntity(UUID id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new AccountNotFoundException(id));
+    }
+
+
+    public boolean accountExists(UUID accountId) {
+        return accountRepository.existsById(accountId);
     }
 }

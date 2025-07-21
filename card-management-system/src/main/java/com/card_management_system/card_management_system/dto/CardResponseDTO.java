@@ -12,7 +12,7 @@ public class CardResponseDTO {
     private UUID id;
     private CommonEnum.StatusType status;
     private LocalDate expiry;
-    private String cardHashNumber;
+    private String cardNumberHash;
     private String lastFourDigits;
     private UUID accountId;
 }
