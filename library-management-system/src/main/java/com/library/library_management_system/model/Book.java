@@ -1,24 +1,25 @@
 package com.library.library_management_system.model;
 
-import com.library.library_management_system.emun.Category;
+import com.library.library_management_system.utils.CommonEnum;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
+import java.util.UUID;
+
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name = "books")
 public class Book {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "book_id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "title", nullable = false, length = 150)
     private String title;
@@ -28,14 +29,14 @@ public class Book {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 20)
-    private Category category;
+    private CommonEnum.Category category;
 
     @Column(name = "is_available", nullable = false)
     private boolean available = true;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id", nullable = false)
-    private Author author;
+
+    @Column(name = "author_id", nullable = false)
+    private UUID authorId;
 
     @Column(name = "base_price", nullable = false, precision = 10, scale = 2)
     @DecimalMin(value = "0.00", message = "Base price cannot be negative")
@@ -59,7 +60,6 @@ public class Book {
 
         BigDecimal total = this.basePrice;
 
-        // Calculate extra days charge (after 1 week)
         int extraDays = Math.max(0, durationDays - 7);
         if (extraDays > 0) {
             BigDecimal extraCharge = this.extraDaysRentalPrice
@@ -67,7 +67,6 @@ public class Book {
             total = total.add(extraCharge);
         }
 
-        // Add insurance fee
         total = total.add(this.insuranceFees);
 
         return total;

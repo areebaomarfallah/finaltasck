@@ -2,89 +2,96 @@ package com.library.library_management_system.service;
 
 import com.library.library_management_system.dto.AuthorRequestDTO;
 import com.library.library_management_system.dto.AuthorResponseDTO;
+import com.library.library_management_system.dto.converter.AuthorConverter;
+import com.library.library_management_system.exception.BusinessRuleException;
+import com.library.library_management_system.exception.ResourceNotFoundException;
 import com.library.library_management_system.model.Author;
-import com.library.library_management_system.model.Book;
 import com.library.library_management_system.repository.AuthorRepository;
-import com.library.library_management_system.repository.BookRepository;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class AuthorService {
-
     private final AuthorRepository authorRepository;
-    private final BookRepository bookRepository;
-
-    private static final String AUTHOR_NOT_FOUND = "Author not found";
-
-    public AuthorService(AuthorRepository authorRepository, BookRepository bookRepository) {
-        this.authorRepository = authorRepository;
-        this.bookRepository = bookRepository;
-    }
-
+    private final AuthorConverter authorConverter;
+    private final  BookService bookService;
     public List<AuthorResponseDTO> getAllAuthors() {
-        return authorRepository.findAll().stream()
-                .map(AuthorResponseDTO::fromEntity)
-                .collect(Collectors.toList());
+        List<Author> authors = authorRepository.findAll();
+        return authors.stream()
+                .map(authorConverter::toDto)
+                .toList();
     }
 
-    private Author toEntity(AuthorRequestDTO dto) {
-        Author author = new Author();
-        author.setName(dto.getName());
-        author.setBiography(dto.getBiography());
-
-        if (dto.getBookIds() != null && !dto.getBookIds().isEmpty()) {
-            List<Book> books = bookRepository.findAllById(dto.getBookIds());
-            for (Book book : books) {
-                book.setAuthor(author); // Set back reference
-            }
-            author.setBooks(books);
-        }
-
-        return author;
+    public AuthorResponseDTO getAuthorById(UUID id) {
+        Author author = authorRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Author not found with id: " + id));
+        return authorConverter.toDto(author);
     }
-
-    public AuthorResponseDTO getAuthorById(Long id) {
-        return authorRepository.findById(id)
-                .map(AuthorResponseDTO::fromEntity)
-                .orElseThrow(() -> new RuntimeException(AUTHOR_NOT_FOUND));
-    }
-
     public AuthorResponseDTO createAuthor(AuthorRequestDTO requestDTO) {
-        Author author = toEntity(requestDTO);
+        Author author = authorConverter.toEntity(requestDTO);
         Author savedAuthor = authorRepository.save(author);
-        return AuthorResponseDTO.fromEntity(savedAuthor);
+        return authorConverter.toDto(savedAuthor);
     }
 
-    public AuthorResponseDTO updateAuthor(Long id, AuthorRequestDTO requestDTO) {
+    public AuthorResponseDTO updateAuthor(UUID id, AuthorRequestDTO requestDTO) {
         Author existingAuthor = authorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(AUTHOR_NOT_FOUND));
+                .orElseThrow(() -> new EntityNotFoundException("Author not found with id: " + id));
 
-        existingAuthor.setName(requestDTO.getName());
-        existingAuthor.setBiography(requestDTO.getBiography());
 
-        if (requestDTO.getBookIds() != null) {
-            // Optionally clear previous associations
-            if (existingAuthor.getBooks() != null) {
-                existingAuthor.getBooks().forEach(book -> book.setAuthor(null));
-            }
+            existingAuthor.setName(requestDTO.getName());
 
-            List<Book> updatedBooks = bookRepository.findAllById(requestDTO.getBookIds());
-            for (Book book : updatedBooks) {
-                book.setAuthor(existingAuthor);
-            }
-            existingAuthor.setBooks(updatedBooks);
-        }
+
+            existingAuthor.setBiography(requestDTO.getBiography());
+
 
         Author updatedAuthor = authorRepository.save(existingAuthor);
-        return AuthorResponseDTO.fromEntity(updatedAuthor);
+        return authorConverter.toDto(updatedAuthor);
     }
 
-    public void deleteAuthor(Long id) {
+    public void deleteAuthor(UUID id) {
+
+        bookService.deleteBooksByAuthor(id);
+
         authorRepository.deleteById(id);
+    }
+
+    public List<UUID> getBooksByAuthor(UUID id) {
+        Author author = authorRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Author not found with id: " + id));
+        return author.getBookIds();
+    }
+
+
+        @Transactional
+        public void removeBookFromAuthor(UUID authorId, UUID bookId) {
+            Author author = getAuthorEntity(authorId);
+            author.getBookIds().remove(bookId);
+            authorRepository.save(author);
+        }
+
+    @Transactional
+    public void addBookToAuthor(UUID authorId, UUID bookId) {
+        Author author = getAuthorEntity(authorId);
+        bookService.validateBookExists(bookId);
+        author.getBookIds().add(bookId);
+        authorRepository.save(author);
+    }
+
+    private Author getAuthorEntity(UUID id) {
+        return authorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Author", id));
+    }
+
+    public String getAuthorName(UUID authorId) {
+        Author author = authorRepository.findById(authorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Author", authorId));
+        return authorConverter.toDto(author).getName();
     }
 }

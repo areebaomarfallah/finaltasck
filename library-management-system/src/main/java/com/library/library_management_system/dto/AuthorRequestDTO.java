@@ -1,11 +1,16 @@
+
 package com.library.library_management_system.dto;
 
-import lombok.Data;
-import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
 
-@Data
+
+@Getter
+@Setter
 public class AuthorRequestDTO {
+    @NotBlank(message = "Author name is required")
     private String name;
+    @NotBlank(message = "Author biography is required")
     private String biography;
-    private List<Long> bookIds; // IDs of books to associate with the author
 }

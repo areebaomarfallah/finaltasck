@@ -1,151 +1,81 @@
 package com.library.library_management_system.service;
 
-import com.library.library_management_system.client.EmailClient;
 import com.library.library_management_system.dto.*;
-import com.library.library_management_system.emun.AccountStatus;
-import com.library.library_management_system.emun.HashUtil;
-import com.library.library_management_system.emun.TransactionStatus;
+import com.library.library_management_system.dto.converter.BorrowerConverter;
 import com.library.library_management_system.exception.*;
-import com.library.library_management_system.model.*;
-import com.library.library_management_system.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.library.library_management_system.model.Borrower;
+import com.library.library_management_system.repository.BorrowerRepository;
+import com.library.library_management_system.utils.CommonEnum;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class BorrowerService {
-
-    private static final Logger LOGGER = Logger.getLogger(BorrowerService.class.getName());
-
     private final BorrowerRepository borrowerRepository;
-    private final EmailClient emailClient;
-    private final BorrowingTransactionRepository transactionRepository;
-
-    @Autowired
-    public BorrowerService(BorrowerRepository borrowerRepository,
-                           EmailClient emailClient,
-                           BorrowingTransactionRepository transactionRepository) {
-        this.borrowerRepository = borrowerRepository;
-        this.emailClient = emailClient;
-        this.transactionRepository = transactionRepository;
-    }
+    private final BorrowerConverter borrowerConverter;
 
     public List<BorrowerResponseDTO> getAllBorrowers() {
         return borrowerRepository.findAll().stream()
-                .map(BorrowerResponseDTO::fromEntity)
-                .collect(Collectors.toList());
+                .map(borrowerConverter::toDto)
+                .toList();
     }
 
-    public BorrowerResponseDTO getBorrowerById(Long id) {
-        return borrowerRepository.findById(id)
-                .map(BorrowerResponseDTO::fromEntity)
-                .orElseThrow(() -> new ResourceNotFoundException("Borrower not found with id: " + id));
+    public BorrowerResponseDTO getBorrowerById(UUID id) {
+        return borrowerConverter.toDto(getBorrowerEntity(id));
     }
 
     public BorrowerResponseDTO createBorrower(BorrowerRequestDTO dto) {
         validateBorrowerData(dto);
-
         if (borrowerRepository.existsByEmail(dto.getEmail())) {
             throw new BusinessRuleException("Email already registered");
         }
 
-        Borrower borrower = new Borrower();
-        borrower.setName(dto.getName());
-        borrower.setEmail(dto.getEmail());
-        borrower.setPhoneNumber(dto.getPhoneNumber());
-        borrower.setStatus(dto.getStatus() != null ? dto.getStatus() : AccountStatus.ACTIVE);
-        borrower.setCardNumberHash(HashUtil.hashCardNumber(dto.getCardNumber()));
-
-        Borrower saved = borrowerRepository.save(borrower);
-        sendWelcomeEmail(saved);
-        return BorrowerResponseDTO.fromEntity(saved);
+        Borrower borrower = borrowerConverter.toEntity(dto);
+        Borrower savedBorrower = borrowerRepository.save(borrower);
+        return borrowerConverter.toDto(savedBorrower);
     }
 
-    public BorrowerResponseDTO updateBorrower(Long id, BorrowerRequestDTO dto) {
-        validateBorrowerData(dto);
+    public void deleteBorrower(UUID id) {
+        Borrower borrower = getBorrowerEntity(id);
+        if (!borrower.getTransactionIds().isEmpty()) {
+            throw new BusinessRuleException("Cannot delete borrower with associated transactions");
+        }
+        borrowerRepository.delete(borrower);
+    }
 
-        Borrower existing = borrowerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Borrower not found with id: " + id));
+    public BorrowerResponseDTO updateBorrower(UUID id, BorrowerRequestDTO dto) {
+        validateBorrowerData(dto);
+        Borrower existing = getBorrowerEntity(id);
 
         if (!existing.getEmail().equals(dto.getEmail()) &&
                 borrowerRepository.existsByEmail(dto.getEmail())) {
             throw new BusinessRuleException("Email already in use by another borrower");
         }
 
-        existing.setName(dto.getName());
-        existing.setEmail(dto.getEmail());
-        existing.setPhoneNumber(dto.getPhoneNumber());
-        existing.setStatus(dto.getStatus());
-
-        if (dto.getCardNumber() != null && !dto.getCardNumber().isEmpty()) {
-            existing.setCardNumberHash(HashUtil.hashCardNumber(dto.getCardNumber()));
-        }
-
-        return BorrowerResponseDTO.fromEntity(borrowerRepository.save(existing));
+        Borrower updated = borrowerConverter.toEntity(dto);
+        updated.setId(id);
+        updated.setTransactionIds(existing.getTransactionIds());
+        return borrowerConverter.toDto(borrowerRepository.save(updated));
     }
 
-    public void deleteBorrower(Long id) {
-        Borrower borrower = borrowerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Borrower not found with id: " + id));
 
-        if (transactionRepository.existsByBorrowerAndStatus(borrower, TransactionStatus.BORROWED)) {
-            throw new BusinessRuleException("Cannot delete borrower with active book loans");
-        }
 
-        borrowerRepository.delete(borrower);
-    }
-
-    public void updateBorrowerStatus(Long id, BorrowerStatusUpdateDTO dto) {
-        Borrower borrower = borrowerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Borrower not found with id: " + id));
-
-        if (!borrower.getStatus().canTransitionTo(dto.getStatus())) {
+    public void updateBorrowerStatus(UUID id, CommonEnum.AccountStatus newStatus) {
+        Borrower borrower = getBorrowerEntity(id);
+        if (!borrower.getStatus().canTransitionTo(newStatus)) {
             throw new InvalidStatusTransitionException(
-                    String.format("Cannot change status from %s to %s",
-                            borrower.getStatus(), dto.getStatus())
-            );
+                    String.format("Cannot change status from %s to %s", borrower.getStatus(), newStatus));
         }
-
-        borrower.setStatus(dto.getStatus());
+        borrower.setStatus(newStatus);
         borrowerRepository.save(borrower);
-        sendStatusChangeNotification(borrower);
     }
 
-    public void borrowBook(Long borrowerId, String bookTitle) {
-        borrowBook(borrowerId, bookTitle, 7); // Default 7 days duration
-    }
-
-    public void borrowBook(Long borrowerId, String bookTitle, int durationDays) {
-        Borrower borrower = borrowerRepository.findById(borrowerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Borrower not found"));
-
-        if (borrower.getStatus() != AccountStatus.ACTIVE) {
-            throw new BusinessRuleException("Borrower account is not active");
-        }
-
-        EmailRequest emailRequest = new EmailRequest();
-        emailRequest.setEmail(borrower.getEmail());
-        emailRequest.setMessage(String.format(
-                "You have successfully borrowed: %s\nDuration: %d days\nDue date: %s",
-                bookTitle,
-                durationDays,
-                LocalDateTime.now().plusDays(durationDays).toLocalDate()
-        ));
-
-        try {
-            emailClient.sendEmail(emailRequest);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Failed to send borrow confirmation to " + borrower.getEmail(), e);
-            throw new EmailNotificationException("Failed to send borrow confirmation");
-        }
-    }
 
     private void validateBorrowerData(BorrowerRequestDTO dto) {
         if (dto.getName() == null || dto.getName().trim().isEmpty()) {
@@ -161,37 +91,36 @@ public class BorrowerService {
             throw new IllegalArgumentException("Card number must be 13-19 digits");
         }
     }
+    public String getBorrowerName(UUID borrowerId) {
+        return borrowerRepository.findById(borrowerId)
+                .map(Borrower::getName)
+                .orElse("Unknown Borrower");
+    }
 
-    private void sendWelcomeEmail(Borrower borrower) {
-        EmailRequest emailRequest = new EmailRequest();
-        emailRequest.setEmail(borrower.getEmail());
-        emailRequest.setMessage(String.format(
-                "Welcome to our library, %s!\n\nYour account details:\nEmail: %s\nStatus: %s",
-                borrower.getName(),
-                borrower.getEmail(),
-                borrower.getStatus()
-        ));
+    @Transactional
+    public void removeTransactionFromBorrower(UUID borrowerId, UUID transactionId) {
+        Borrower borrower = getBorrowerEntity(borrowerId);
+        borrower.getTransactionIds().remove(transactionId);
+        borrowerRepository.save(borrower);
+    }
 
-        try {
-            emailClient.sendEmail(emailRequest);
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to send welcome email to " + borrower.getEmail(), e);
+
+
+    public void validateBorrowerActive(UUID borrowerId) {
+        if (getBorrowerEntity(borrowerId).getStatus() != CommonEnum.AccountStatus.ACTIVE) {
+            throw new BusinessRuleException("Borrower account is not active");
         }
     }
 
-    private void sendStatusChangeNotification(Borrower borrower) {
-        EmailRequest emailRequest = new EmailRequest();
-        emailRequest.setEmail(borrower.getEmail());
-        emailRequest.setMessage(String.format(
-                "Account Status Update\n\nDear %s,\nYour account status has been changed to: %s",
-                borrower.getName(),
-                borrower.getStatus()
-        ));
+    @Transactional
+    public void addTransactionToBorrower(UUID borrowerId, UUID transactionId) {
+        Borrower borrower = getBorrowerEntity(borrowerId);
+        borrower.getTransactionIds().add(transactionId);
+        borrowerRepository.save(borrower);
+    }
 
-        try {
-            emailClient.sendEmail(emailRequest);
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to send status notification to " + borrower.getEmail(), e);
-        }
+    public Borrower getBorrowerEntity(UUID id) {
+        return borrowerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Borrower", id));
     }
 }

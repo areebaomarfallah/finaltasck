@@ -2,104 +2,140 @@ package com.library.library_management_system.service;
 
 import com.library.library_management_system.dto.BookRequestDTO;
 import com.library.library_management_system.dto.BookResponseDTO;
-import com.library.library_management_system.emun.Category;
-import com.library.library_management_system.model.Author;
+import com.library.library_management_system.dto.converter.BookConverter;
+import com.library.library_management_system.exception.BusinessRuleException;
+import com.library.library_management_system.exception.ResourceNotFoundException;
 import com.library.library_management_system.model.Book;
-import com.library.library_management_system.repository.AuthorRepository;
 import com.library.library_management_system.repository.BookRepository;
+import com.library.library_management_system.utils.CommonEnum;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class BookService {
-
     private final BookRepository bookRepository;
-    private final AuthorRepository authorRepository;
+    private final AuthorService authorService;
+    private final BookConverter bookConverter;
 
-    private static final String BOOK_NOT_FOUND = "Book not found";
-    private static final String AUTHOR_NOT_FOUND = "Author not found";
+    public BookResponseDTO createBook(BookRequestDTO requestDTO) {
+        authorService.getAuthorById(requestDTO.getAuthorId());
 
-    public BookService(BookRepository bookRepository, AuthorRepository authorRepository) {
-        this.bookRepository = bookRepository;
-        this.authorRepository = authorRepository;
+        Book book = bookConverter.toEntity(requestDTO);
+        Book savedBook = bookRepository.save(book);
+
+        authorService.addBookToAuthor(savedBook.getAuthorId(), savedBook.getId());
+
+        return bookConverter.toDto(savedBook);
     }
 
-    private Book toEntity(BookRequestDTO dto, Author author) {
-        Book book = new Book();
-        book.setTitle(dto.getTitle());
-        book.setIsbn(dto.getIsbn());
-        book.setCategory(dto.getCategory());
-        book.setAvailable(dto.isAvailable());
-        book.setAuthor(author);
-        book.setBasePrice(dto.getBasePrice() != null ? dto.getBasePrice() : BigDecimal.ZERO);
-        book.setExtraDaysRentalPrice(dto.getExtraDaysRentalPrice() != null ? dto.getExtraDaysRentalPrice() : BigDecimal.ZERO);
-        book.setInsuranceFees(dto.getInsuranceFees() != null ? dto.getInsuranceFees() : BigDecimal.ZERO);
-        return book;
-    }
-    public List<BookResponseDTO> getAllBooks() {
-        return bookRepository.findAll().stream()
-                .map(BookResponseDTO::fromEntity)
-                .collect(Collectors.toList());
-    }
+    public BookResponseDTO updateBook(UUID id, BookRequestDTO requestDTO) {
+        Book existingBook = getBookEntity(id);
 
-    public BookResponseDTO getBookById(Long id) {
-        Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(BOOK_NOT_FOUND));
-        return BookResponseDTO.fromEntity(book);
-    }
+        if (!existingBook.getAuthorId().equals(requestDTO.getAuthorId())) {
+            authorService.removeBookFromAuthor(existingBook.getAuthorId(), id);
 
-    public BookResponseDTO createBook(BookRequestDTO bookRequestDTO) {
-        Author author = authorRepository.findById(bookRequestDTO.getAuthorId())
-                .orElseThrow(() -> new RuntimeException(AUTHOR_NOT_FOUND));
-        Book book = toEntity(bookRequestDTO, author);
-        book.setAvailable(true); // default availability
-        book = bookRepository.save(book);
-        return BookResponseDTO.fromEntity(book);
-    }
+            authorService.addBookToAuthor(requestDTO.getAuthorId(), id);
+        }
 
-    public BookResponseDTO updateBook(Long id, BookRequestDTO bookRequestDTO) {
-        Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(BOOK_NOT_FOUND));
-
-        Author author = authorRepository.findById(bookRequestDTO.getAuthorId())
-                .orElseThrow(() -> new RuntimeException(AUTHOR_NOT_FOUND));
-
-        book.setTitle(bookRequestDTO.getTitle());
-        book.setIsbn(bookRequestDTO.getIsbn());
-        book.setCategory(bookRequestDTO.getCategory());
-        book.setAvailable(bookRequestDTO.isAvailable());
-        book.setAuthor(author);
-
-        book = bookRepository.save(book);
-        return BookResponseDTO.fromEntity(book);
-    }
-
-    public void deleteBook(Long id) {
-        bookRepository.deleteById(id);
+        Book updatedBook = bookConverter.toEntity(requestDTO);
+        updatedBook.setId(id);
+        return bookConverter.toDto(bookRepository.save(updatedBook));
     }
 
     public List<BookResponseDTO> searchBooksByTitle(String title) {
         return bookRepository.findByTitleContainingIgnoreCase(title).stream()
-                .map(BookResponseDTO::fromEntity)
-                .collect(Collectors.toList());
+                .map(bookConverter::toDto)
+                .toList();
     }
 
-    public List<BookResponseDTO> searchBooksByCategory(Category category) {
+    public List<BookResponseDTO> searchBooksByCategory(CommonEnum.Category category) {
         return bookRepository.findByCategory(category).stream()
-                .map(BookResponseDTO::fromEntity)
-                .collect(Collectors.toList());
+                .map(bookConverter::toDto)
+                .toList();
     }
 
-    public List<BookResponseDTO> searchBooksByAuthor(Long authorId) {
-        Author author = authorRepository.findById(authorId)
-                .orElseThrow(() -> new RuntimeException(AUTHOR_NOT_FOUND));
-        return bookRepository.findByAuthor(author).stream()
-                .map(BookResponseDTO::fromEntity)
-                .collect(Collectors.toList());
+    public List<BookResponseDTO> searchBooksByAuthor(UUID authorId) {
+        return bookRepository.findByAuthorId(authorId).stream()
+                .map(bookConverter::toDto)
+                .toList();
+    }
+
+    public List<BookResponseDTO> getAllBooks() {
+        return bookRepository.findAll().stream()
+                .map(bookConverter::toDto)
+                .toList();
+    }
+
+
+
+
+    public void deleteBook(UUID bookId) {
+        Book book = getBookEntity(bookId);
+
+        authorService.removeBookFromAuthor(book.getAuthorId(), bookId);
+
+        bookRepository.deleteById(bookId);
+    }
+
+    public void deleteBooksByAuthor(UUID authorId) {
+        List<Book> books = bookRepository.findByAuthorId(authorId);
+        books.forEach(book -> bookRepository.deleteById(book.getId()));
+    }
+
+    public String getBookTitle(UUID bookId) {
+        return bookRepository.findById(bookId)
+                .map(Book::getTitle)
+                .orElse("Unknown Book");
+    }
+
+
+
+    @Transactional
+    public void markBookAsAvailable(UUID bookId) {
+        Book book = getBookEntity(bookId);
+        book.setAvailable(true);
+        bookRepository.save(book);
+    }
+    public BookResponseDTO getBookById(UUID id) {
+        Book book = getBookEntity(id);
+        BookResponseDTO dto = bookConverter.toDto(book);
+        dto.setAuthorName(authorService.getAuthorName(book.getAuthorId()));
+        return dto;
+    }
+
+    // Validation methods
+    public void validateBookExists(UUID bookId) {
+        if (!bookRepository.existsById(bookId)) {
+            throw new ResourceNotFoundException("Book", bookId);
+        }
+    }
+
+    public void validateBookAvailable(UUID bookId) {
+        if (!getBookEntity(bookId).isAvailableForBorrow()) {
+            throw new BusinessRuleException("Book is not available for borrowing");
+        }
+    }
+
+
+    @Transactional
+    public void markBookAsBorrowed(UUID bookId) {
+        Book book = getBookEntity(bookId);
+        if (!book.isAvailable()) {
+            throw new BusinessRuleException("Book is already borrowed");
+        }
+        book.setAvailable(false);
+        bookRepository.save(book);
+    }
+
+
+    public Book getBookEntity(UUID id) {
+        return bookRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Book", id));
     }
 }

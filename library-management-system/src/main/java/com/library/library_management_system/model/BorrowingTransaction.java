@@ -1,22 +1,23 @@
 package com.library.library_management_system.model;
 
-import com.library.library_management_system.emun.TransactionStatus;
+import com.library.library_management_system.utils.CommonEnum;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name = "borrowing_transactions")
 public class BorrowingTransaction {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "transaction_id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "borrow_date", nullable = false)
     private LocalDateTime borrowDate;
@@ -29,15 +30,13 @@ public class BorrowingTransaction {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private TransactionStatus status;
+    private CommonEnum.TransactionStatus status;
 
-    @ManyToOne
-    @JoinColumn(name = "book_id", nullable = false)
-    private Book book;
+    @Column(name = "book_id", nullable = false)
+    private UUID bookId;
 
-    @ManyToOne
-    @JoinColumn(name = "borrower_id", nullable = false)
-    private Borrower borrower;
+    @Column(name = "borrower_id", nullable = false)
+    private UUID borrowerId;
 
     @Column(name = "transaction_amount", precision = 10, scale = 2)
     private BigDecimal transactionAmount;

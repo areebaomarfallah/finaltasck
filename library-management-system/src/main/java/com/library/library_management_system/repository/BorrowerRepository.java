@@ -5,14 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface BorrowerRepository extends JpaRepository<Borrower, Long> {
+public interface BorrowerRepository extends JpaRepository<Borrower, UUID> {
 
     // Add these methods
     boolean existsByEmail(String email);
 
     Optional<Borrower> findByEmail(String email);
 
-    // Keep any existing methods
 }

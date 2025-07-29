@@ -30,23 +30,16 @@ public class CardService {
             throw new IllegalArgumentException("Account does not exist");
         }
 
-        // Generate card details
         String generatedCardNumber = cardUtil.generateValidCardNumber();
         String lastFour = generatedCardNumber.substring(generatedCardNumber.length() - 4);
 
-        // Create entity
+
         Card card = cardConverter.toEntity(dto);
         card.setCardNumberHash(cardUtil.hashCardNumber(generatedCardNumber));
         card.setLastFourDigits(lastFour);
         card.setExpiry(LocalDate.now().plusYears(5));
         card.setAccount(accountService.getAccountEntity(dto.getAccountId()));
 
-        // Set default status if null
-        if (card.getStatus() == null) {
-            card.setStatus(CommonEnum.StatusType.INACTIVE);
-        }
-
-        // Save and convert
         return cardConverter.toDto(cardRepository.save(card));
     }
 

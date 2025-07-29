@@ -1,20 +1,24 @@
+
 package com.library.library_management_system.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
+
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name = "authors")
 public class Author {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "author_id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -22,8 +26,9 @@ public class Author {
     @Column(name = "biography", columnDefinition = "TEXT")
     private String biography;
 
-    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL)
-    private List<Book> books = new ArrayList<>();
 
-    // Getters and setters
+    @ElementCollection
+    @CollectionTable(name = "author_books", joinColumns = @JoinColumn(name = "author_id"))
+    @Column(name = "book_id")
+    private List<UUID> bookIds = new ArrayList<>();
 }

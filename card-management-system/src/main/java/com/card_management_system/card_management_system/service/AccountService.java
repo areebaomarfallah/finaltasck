@@ -30,14 +30,6 @@ public class AccountService {
     public AccountResponseDTO updateAccount(UUID id, AccountRequestDTO dto) {
         Account account = getAccountEntity(id);
 
-        if (dto.getStatus() != null) {
-            account.setStatus(dto.getStatus());
-        }
-        if (dto.getBalance() != null) {
-
-            account.setBalance(dto.getBalance());
-        }
-
         return accountConverter.toDto(accountRepository.save(account));
     }
 

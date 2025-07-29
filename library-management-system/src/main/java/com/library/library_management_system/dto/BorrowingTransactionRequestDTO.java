@@ -1,15 +1,27 @@
+// BorrowingTransactionRequestDTO.java
 package com.library.library_management_system.dto;
 
-import com.library.library_management_system.emun.TransactionStatus;
-import lombok.Data;
-
+import com.library.library_management_system.utils.CommonEnum;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 public class BorrowingTransactionRequestDTO {
+    @NotNull(message = "Borrow date is required")
     private LocalDateTime borrowDate;
+    
     private LocalDateTime returnDate;
-    private TransactionStatus status;
-    private Long bookId;
-    private Long borrowerId;
+    
+    @NotNull(message = "Transaction status is required")
+    private CommonEnum.TransactionStatus status;
+    
+    @NotNull(message = "Book ID is required")
+    private UUID bookId;
+    
+    @NotNull(message = "Borrower ID is required")
+    private UUID borrowerId;
 }

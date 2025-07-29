@@ -1,23 +1,25 @@
 package com.library.library_management_system.model;
 
-import com.library.library_management_system.emun.AccountStatus;
+import com.library.library_management_system.utils.CommonEnum;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name = "borrowers")
 public class Borrower {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "borrower_id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -32,17 +34,13 @@ public class Borrower {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private AccountStatus status = AccountStatus.ACTIVE;
+    private CommonEnum.AccountStatus status = CommonEnum.AccountStatus.ACTIVE;
 
     @Column(name = "card_number_hash", nullable = false, length = 255)
     private String cardNumberHash;
 
-    @OneToMany(mappedBy = "borrower", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BorrowingTransaction> transactions = new ArrayList<>();
-
-    public boolean canBorrow() {
-        return this.status == AccountStatus.ACTIVE &&
-                this.cardNumberHash != null &&
-                !this.cardNumberHash.isEmpty();
-    }
+    @ElementCollection
+    @CollectionTable(name = "borrower_transactions", joinColumns = @JoinColumn(name = "borrower_id"))
+    @Column(name = "transaction_id")
+    private List<UUID> transactionIds = new ArrayList<>();
 }
