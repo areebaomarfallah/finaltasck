@@ -64,8 +64,6 @@ public class BorrowerService {
         return borrowerConverter.toDto(borrowerRepository.save(updated));
     }
 
-
-
     public void updateBorrowerStatus(UUID id, CommonEnum.AccountStatus newStatus) {
         Borrower borrower = getBorrowerEntity(id);
         if (!borrower.getStatus().canTransitionTo(newStatus)) {
@@ -75,7 +73,6 @@ public class BorrowerService {
         borrower.setStatus(newStatus);
         borrowerRepository.save(borrower);
     }
-
 
     private void validateBorrowerData(BorrowerRequestDTO dto) {
         if (dto.getName() == null || dto.getName().trim().isEmpty()) {
@@ -91,6 +88,7 @@ public class BorrowerService {
             throw new IllegalArgumentException("Card number must be 13-19 digits");
         }
     }
+
     public String getBorrowerName(UUID borrowerId) {
         return borrowerRepository.findById(borrowerId)
                 .map(Borrower::getName)
@@ -103,8 +101,6 @@ public class BorrowerService {
         borrower.getTransactionIds().remove(transactionId);
         borrowerRepository.save(borrower);
     }
-
-
 
     public void validateBorrowerActive(UUID borrowerId) {
         if (getBorrowerEntity(borrowerId).getStatus() != CommonEnum.AccountStatus.ACTIVE) {

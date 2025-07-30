@@ -12,9 +12,7 @@ import java.util.UUID;
 @Repository
 public interface BorrowingTransactionRepository extends JpaRepository<BorrowingTransaction, UUID> {
 
-    List<BorrowingTransaction> findByBorrower(UUID borrower);
-
-    List<BorrowingTransaction> findByBook(UUID book);
-
+    List<BorrowingTransaction> findByBookId(UUID bookId);
+    List<BorrowingTransaction> findByBorrowerId(UUID borrowerId);
     List<BorrowingTransaction> findByDueDateBeforeAndStatus(LocalDateTime date, CommonEnum.TransactionStatus status);
 }

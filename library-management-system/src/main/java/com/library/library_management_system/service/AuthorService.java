@@ -20,62 +20,45 @@ import java.util.UUID;
 public class AuthorService {
     private final AuthorRepository authorRepository;
     private final AuthorConverter authorConverter;
-    private final  BookService bookService;
+    private final BookService bookService;
+
     public List<AuthorResponseDTO> getAllAuthors() {
-        List<Author> authors = authorRepository.findAll();
-        return authors.stream()
+        return authorRepository.findAll().stream()
                 .map(authorConverter::toDto)
                 .toList();
     }
 
     public AuthorResponseDTO getAuthorById(UUID id) {
-        Author author = authorRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Author not found with id: " + id));
-        return authorConverter.toDto(author);
+        return authorConverter.toDto(getAuthorEntity(id));
     }
+
     public AuthorResponseDTO createAuthor(AuthorRequestDTO requestDTO) {
         Author author = authorConverter.toEntity(requestDTO);
-        Author savedAuthor = authorRepository.save(author);
-        return authorConverter.toDto(savedAuthor);
+        return authorConverter.toDto(authorRepository.save(author));
     }
 
     public AuthorResponseDTO updateAuthor(UUID id, AuthorRequestDTO requestDTO) {
-        Author existingAuthor = authorRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Author not found with id: " + id));
-
-
-            existingAuthor.setName(requestDTO.getName());
-
-
-            existingAuthor.setBiography(requestDTO.getBiography());
-
-
-        Author updatedAuthor = authorRepository.save(existingAuthor);
-        return authorConverter.toDto(updatedAuthor);
+        Author author = getAuthorEntity(id);
+        author.setName(requestDTO.getName());
+        author.setBiography(requestDTO.getBiography());
+        return authorConverter.toDto(authorRepository.save(author));
     }
 
     public void deleteAuthor(UUID id) {
-
         bookService.deleteBooksByAuthor(id);
-
         authorRepository.deleteById(id);
     }
 
     public List<UUID> getBooksByAuthor(UUID id) {
-        Author author = authorRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Author not found with id: " + id));
-        return author.getBookIds();
+        return getAuthorEntity(id).getBookIds();
     }
 
+    public void removeBookFromAuthor(UUID authorId, UUID bookId) {
+        Author author = getAuthorEntity(authorId);
+        author.getBookIds().remove(bookId);
+        authorRepository.save(author);
+    }
 
-        @Transactional
-        public void removeBookFromAuthor(UUID authorId, UUID bookId) {
-            Author author = getAuthorEntity(authorId);
-            author.getBookIds().remove(bookId);
-            authorRepository.save(author);
-        }
-
-    @Transactional
     public void addBookToAuthor(UUID authorId, UUID bookId) {
         Author author = getAuthorEntity(authorId);
         bookService.validateBookExists(bookId);
@@ -83,14 +66,12 @@ public class AuthorService {
         authorRepository.save(author);
     }
 
+    public String getAuthorName(UUID authorId) {
+        return getAuthorEntity(authorId).getName();
+    }
+
     private Author getAuthorEntity(UUID id) {
         return authorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Author", id));
-    }
-
-    public String getAuthorName(UUID authorId) {
-        Author author = authorRepository.findById(authorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Author", authorId));
-        return authorConverter.toDto(author).getName();
     }
 }

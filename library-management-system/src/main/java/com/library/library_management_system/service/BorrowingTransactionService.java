@@ -6,7 +6,7 @@ import com.library.library_management_system.dto.converter.BorrowingTransactionC
 import com.library.library_management_system.exception.*;
 import com.library.library_management_system.model.*;
 import com.library.library_management_system.repository.BorrowingTransactionRepository;
-import com.library.library_management_system.utils.CommonEnum;
+import com.library.library_management_system.utils.CommonEnum.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,126 +21,110 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class BorrowingTransactionService {
+
     private final BorrowingTransactionRepository transactionRepository;
     private final BookService bookService;
     private final BorrowerService borrowerService;
     private final CmsClient cmsClient;
-    private final BorrowingTransactionConverter transactionConverter;
+    private final BorrowingTransactionConverter converter;
 
     @Value("${borrowing.max-period-days:30}")
     private int maxBorrowPeriodDays;
 
     public List<BorrowingTransactionResponseDTO> getAllTransactions() {
         return transactionRepository.findAll().stream()
-                .map(transactionConverter::toDto)
-                .map(this::enrichTransactionDTO)
+                .map(converter::toDto)
+                .map(this::enrich)
                 .toList();
     }
 
     public BorrowingTransactionResponseDTO getTransactionById(UUID id) {
-        return enrichTransactionDTO(
-                transactionConverter.toDto(getTransactionEntity(id))
-        );
+        return enrich(converter.toDto(getTransactionEntity(id)));
     }
 
-    @Transactional
     public BorrowingTransactionResponseDTO borrowBook(UUID bookId, UUID borrowerId, int durationDays) {
         validateBorrowPeriod(durationDays);
-        validateTransactionEligibility(bookId, borrowerId);
+        validateEligibility(bookId, borrowerId);
 
         Book book = bookService.getBookEntity(bookId);
         Borrower borrower = borrowerService.getBorrowerEntity(borrowerId);
-        BigDecimal amount = book.calculateTotalPrice(durationDays);
+        BigDecimal totalAmount = book.calculateTotalPrice(durationDays);
 
-        TransactionResponseDTO paymentResponse = processPayment(borrower, amount);
-        BorrowingTransaction transaction = createTransaction(
-                bookId, borrowerId, durationDays, amount, paymentResponse.getId()
-        );
+        TransactionResponseDTO payment = processPayment(borrower.getCardNumberHash(), totalAmount, TransactionType.DEBIT);
 
-        updateSystemState(bookId, borrowerId, transaction.getId());
-        return enrichTransactionDTO(
-                transactionConverter.toDto(transactionRepository.save(transaction))
-        );
+        BorrowingTransaction transaction = createTransaction(bookId, borrowerId, durationDays, totalAmount, payment.getId());
+        bookService.markBookAsBorrowed(bookId);
+        borrowerService.addTransactionToBorrower(borrowerId, transaction.getId());
+
+        return enrich(converter.toDto(transactionRepository.save(transaction)));
     }
 
-    @Transactional
     public BorrowingTransactionResponseDTO returnBook(UUID transactionId) {
         BorrowingTransaction transaction = getBorrowedTransaction(transactionId);
         transaction.setReturnDate(LocalDateTime.now());
-        transaction.setStatus(CommonEnum.TransactionStatus.RETURNED);
+        transaction.setStatus(TransactionStatus.RETURNED);
 
         bookService.markBookAsAvailable(transaction.getBookId());
         borrowerService.removeTransactionFromBorrower(transaction.getBorrowerId(), transactionId);
 
         if (isReturnedOnTime(transaction)) {
-            processInsuranceRefund(transaction);
+            refundInsurance(transaction);
         }
 
-        return enrichTransactionDTO(
-                transactionConverter.toDto(transactionRepository.save(transaction))
-        );
+        return enrich(converter.toDto(transactionRepository.save(transaction)));
     }
 
-    private BorrowingTransaction createTransaction(UUID bookId, UUID borrowerId,
-                                                   int durationDays, BigDecimal amount,
-                                                   UUID paymentId) {
-        BorrowingTransaction transaction = new BorrowingTransaction();
-        transaction.setBookId(bookId);
-        transaction.setBorrowerId(borrowerId);
-        transaction.setBorrowDate(LocalDateTime.now());
-        transaction.setDueDate(LocalDateTime.now().plusDays(durationDays));
-        transaction.setStatus(CommonEnum.TransactionStatus.BORROWED);
-        transaction.setTransactionAmount(amount);
-        transaction.setCmsTransactionId(paymentId);
-        return transaction;
+    private BorrowingTransaction createTransaction(UUID bookId, UUID borrowerId, int days, BigDecimal amount, UUID paymentId) {
+        BorrowingTransaction tx = new BorrowingTransaction();
+        tx.setBookId(bookId);
+        tx.setBorrowerId(borrowerId);
+        tx.setBorrowDate(LocalDateTime.now());
+        tx.setDueDate(LocalDateTime.now().plusDays(days));
+        tx.setTransactionAmount(amount);
+        tx.setStatus(TransactionStatus.BORROWED);
+        tx.setCmsTransactionId(paymentId);
+        return tx;
     }
 
-    private void updateSystemState(UUID bookId, UUID borrowerId, UUID transactionId) {
-        bookService.markBookAsBorrowed(bookId);
-        borrowerService.addTransactionToBorrower(borrowerId, transactionId);
-    }
-
-    private TransactionResponseDTO processPayment(Borrower borrower, BigDecimal amount) {
-        TransactionRequestDTO paymentRequest = new TransactionRequestDTO();
-        paymentRequest.setTransactionAmount(amount);
-        paymentRequest.setTransactionType(CommonEnum.TransactionType.DEBIT);
-        paymentRequest.setCardNumberHash(borrower.getCardNumberHash());
-
-        TransactionResponseDTO response = cmsClient.processTransaction(paymentRequest);
-        if (response.getStatus() != CommonEnum.Status.SUCCESS) {
-            throw new PaymentProcessingException(response.getMessage());
-        }
-        return response;
-    }
-
-    private void processInsuranceRefund(BorrowingTransaction transaction) {
-        Book book = bookService.getBookEntity(transaction.getBookId());
-        Borrower borrower = borrowerService.getBorrowerEntity(transaction.getBorrowerId());
-
-        TransactionRequestDTO refundRequest = new TransactionRequestDTO();
-        refundRequest.setTransactionAmount(book.getInsuranceFees());
-        refundRequest.setTransactionType(CommonEnum.TransactionType.CREDIT);
-        refundRequest.setCardNumberHash(borrower.getCardNumberHash());
-
-        TransactionResponseDTO response = cmsClient.processTransaction(refundRequest);
-        transaction.setInsuranceRefunded(response.getStatus() == CommonEnum.Status.SUCCESS);
-    }
-
-    private BorrowingTransactionResponseDTO enrichTransactionDTO(BorrowingTransactionResponseDTO dto) {
+    private BorrowingTransactionResponseDTO enrich(BorrowingTransactionResponseDTO dto) {
         dto.setBookTitle(bookService.getBookTitle(dto.getBookId()));
         dto.setBorrowerName(borrowerService.getBorrowerName(dto.getBorrowerId()));
         return dto;
     }
 
-    private void validateBorrowPeriod(int durationDays) {
-        if (durationDays < 1 || durationDays > maxBorrowPeriodDays) {
-            throw new BusinessRuleException(
-                    "Borrow period must be between 1 and %d days".formatted(maxBorrowPeriodDays)
-            );
+    private TransactionResponseDTO processPayment(String cardHash, BigDecimal amount, TransactionType type) {
+        TransactionRequestDTO request = new TransactionRequestDTO();
+        request.setCardNumberHash(cardHash);
+        request.setTransactionAmount(amount);
+        request.setTransactionType(type);
+
+        TransactionResponseDTO response = cmsClient.processTransaction(request);
+        if (response.getStatus() != Status.SUCCESS) {
+            throw new PaymentProcessingException(response.getMessage());
+        }
+        return response;
+    }
+
+    private void refundInsurance(BorrowingTransaction transaction) {
+        Book book = bookService.getBookEntity(transaction.getBookId());
+        Borrower borrower = borrowerService.getBorrowerEntity(transaction.getBorrowerId());
+
+        TransactionResponseDTO refund = processPayment(
+                borrower.getCardNumberHash(),
+                book.getInsuranceFees(),
+                TransactionType.CREDIT
+        );
+
+        transaction.setInsuranceRefunded(refund.getStatus() == Status.SUCCESS);
+    }
+
+    private void validateBorrowPeriod(int days) {
+        if (days < 1 || days > maxBorrowPeriodDays) {
+            throw new BusinessRuleException("Borrow period must be between 1 and %d days".formatted(maxBorrowPeriodDays));
         }
     }
 
-    private void validateTransactionEligibility(UUID bookId, UUID borrowerId) {
+    private void validateEligibility(UUID bookId, UUID borrowerId) {
         bookService.validateBookAvailable(bookId);
         borrowerService.validateBorrowerActive(borrowerId);
     }
@@ -151,14 +135,14 @@ public class BorrowingTransactionService {
     }
 
     private BorrowingTransaction getBorrowedTransaction(UUID id) {
-        BorrowingTransaction transaction = getTransactionEntity(id);
-        if (transaction.getStatus() != CommonEnum.TransactionStatus.BORROWED) {
+        BorrowingTransaction tx = getTransactionEntity(id);
+        if (tx.getStatus() != TransactionStatus.BORROWED) {
             throw new BusinessRuleException("Transaction is not in BORROWED state");
         }
-        return transaction;
+        return tx;
     }
 
-    private boolean isReturnedOnTime(BorrowingTransaction transaction) {
-        return transaction.getReturnDate().isBefore(transaction.getDueDate());
+    private boolean isReturnedOnTime(BorrowingTransaction tx) {
+        return tx.getReturnDate().isBefore(tx.getDueDate());
     }
 }
