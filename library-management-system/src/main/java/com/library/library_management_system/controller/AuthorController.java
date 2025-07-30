@@ -31,7 +31,8 @@ public class AuthorController {
 
     @PostMapping
     public ResponseEntity<AuthorResponseDTO> createAuthor(@Valid @RequestBody AuthorRequestDTO requestDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(authorService.createAuthor(requestDTO));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(authorService.createAuthor(requestDTO));
     }
 
     @PutMapping("/{id}")
@@ -46,10 +47,4 @@ public class AuthorController {
         authorService.deleteAuthor(id);
         return ResponseEntity.noContent().build();
     }
-
-    @GetMapping("/{id}/books")
-    public ResponseEntity<List<UUID>> getBooksIdsByAuthor(@PathVariable UUID id) {
-        return ResponseEntity.ok(authorService.getBooksByAuthor(id));
-    }
-
 }

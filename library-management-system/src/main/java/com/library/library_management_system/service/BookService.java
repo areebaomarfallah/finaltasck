@@ -9,6 +9,7 @@ import com.library.library_management_system.model.Book;
 import com.library.library_management_system.repository.BookRepository;
 import com.library.library_management_system.utils.CommonEnum;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +21,8 @@ import java.util.UUID;
 @Transactional
 public class BookService {
     private final BookRepository bookRepository;
-    private final AuthorService authorService;
+   @Lazy
+   private final AuthorService authorService;
     private final BookConverter bookConverter;
 
     public BookResponseDTO createBook(BookRequestDTO requestDTO) {
@@ -109,7 +111,6 @@ public class BookService {
         return dto;
     }
 
-    // Validation methods
     public void validateBookExists(UUID bookId) {
         if (!bookRepository.existsById(bookId)) {
             throw new ResourceNotFoundException("Book", bookId);

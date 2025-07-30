@@ -30,7 +30,8 @@ public class BorrowerController {
 
     @PostMapping
     public ResponseEntity<BorrowerResponseDTO> createBorrower(@Valid @RequestBody BorrowerRequestDTO requestDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(borrowerService.createBorrower(requestDTO));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(borrowerService.createBorrower(requestDTO));
     }
 
     @PutMapping("/{id}")
@@ -43,15 +44,6 @@ public class BorrowerController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBorrower(@PathVariable UUID id) {
         borrowerService.deleteBorrower(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    // In BorrowerController.java
-    @PostMapping("/{id}/status")
-    public ResponseEntity<Void> updateBorrowerStatus(
-            @PathVariable UUID id,
-            @RequestParam CommonEnum.AccountStatus status) {
-        borrowerService.updateBorrowerStatus(id, status);
         return ResponseEntity.noContent().build();
     }
 }

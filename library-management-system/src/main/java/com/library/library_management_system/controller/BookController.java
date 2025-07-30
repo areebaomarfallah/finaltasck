@@ -31,7 +31,8 @@ public class BookController {
 
     @PostMapping
     public ResponseEntity<BookResponseDTO> createBook(@Valid @RequestBody BookRequestDTO requestDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(bookService.createBook(requestDTO));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(bookService.createBook(requestDTO));
     }
 
     @PutMapping("/{id}")
@@ -45,20 +46,5 @@ public class BookController {
     public ResponseEntity<Void> deleteBook(@PathVariable UUID id) {
         bookService.deleteBook(id);
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/search/title")
-    public ResponseEntity<List<BookResponseDTO>> searchByTitle(@RequestParam String title) {
-        return ResponseEntity.ok(bookService.searchBooksByTitle(title));
-    }
-
-    @GetMapping("/search/category")
-    public ResponseEntity<List<BookResponseDTO>> searchByCategory(@RequestParam CommonEnum.Category category) {
-        return ResponseEntity.ok(bookService.searchBooksByCategory(category));
-    }
-
-    @GetMapping("/search/author/{authorId}")
-    public ResponseEntity<List<BookResponseDTO>> searchByAuthor(@PathVariable UUID authorId) {
-        return ResponseEntity.ok(bookService.searchBooksByAuthor(authorId));
     }
 }

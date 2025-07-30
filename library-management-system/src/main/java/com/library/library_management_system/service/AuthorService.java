@@ -3,7 +3,6 @@ package com.library.library_management_system.service;
 import com.library.library_management_system.dto.AuthorRequestDTO;
 import com.library.library_management_system.dto.AuthorResponseDTO;
 import com.library.library_management_system.dto.converter.AuthorConverter;
-import com.library.library_management_system.exception.BusinessRuleException;
 import com.library.library_management_system.exception.ResourceNotFoundException;
 import com.library.library_management_system.model.Author;
 import com.library.library_management_system.repository.AuthorRepository;

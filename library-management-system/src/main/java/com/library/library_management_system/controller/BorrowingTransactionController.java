@@ -29,13 +29,6 @@ public class BorrowingTransactionController {
         return ResponseEntity.ok(transactionService.getTransactionById(id));
     }
 
-    @PostMapping
-    public ResponseEntity<BorrowingTransactionResponseDTO> createTransaction(
-            @Valid @RequestBody BorrowingTransactionRequestDTO requestDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(transactionService.createTransaction(requestDTO));
-    }
-
     @PostMapping("/borrow")
     public ResponseEntity<BorrowingTransactionResponseDTO> borrowBook(
             @RequestParam UUID bookId,
@@ -50,24 +43,4 @@ public class BorrowingTransactionController {
         return ResponseEntity.ok(transactionService.returnBook(transactionId));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTransaction(@PathVariable UUID id) {
-        transactionService.deleteTransaction(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/book/{bookId}")
-    public ResponseEntity<List<BorrowingTransactionResponseDTO>> getByBook(@PathVariable UUID bookId) {
-        return ResponseEntity.ok(transactionService.getTransactionsByBook(bookId));
-    }
-
-    @GetMapping("/borrower/{borrowerId}")
-    public ResponseEntity<List<BorrowingTransactionResponseDTO>> getByBorrower(@PathVariable UUID borrowerId) {
-        return ResponseEntity.ok(transactionService.getTransactionsByBorrower(borrowerId));
-    }
-
-    @GetMapping("/overdue")
-    public ResponseEntity<List<BorrowingTransactionResponseDTO>> getOverdueTransactions() {
-        return ResponseEntity.ok(transactionService.findOverdueTransactions());
-    }
 }
