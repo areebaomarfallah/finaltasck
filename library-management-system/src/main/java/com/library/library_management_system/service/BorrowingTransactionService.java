@@ -1,6 +1,7 @@
 package com.library.library_management_system.service;
 
 import com.library.library_management_system.client.CmsClient;
+import com.library.library_management_system.client.EmailClient;
 import com.library.library_management_system.dto.*;
 import com.library.library_management_system.dto.converter.BorrowingTransactionConverter;
 import com.library.library_management_system.exception.*;
@@ -26,6 +27,7 @@ public class BorrowingTransactionService {
     private final BookService bookService;
     private final BorrowerService borrowerService;
     private final CmsClient cmsClient;
+    private final EmailClient emailClient;
     private final BorrowingTransactionConverter converter;
 
     @Value("${borrowing.max-period-days:30}")
@@ -55,6 +57,8 @@ public class BorrowingTransactionService {
         BorrowingTransaction transaction = createTransaction(bookId, borrowerId, durationDays, totalAmount, payment.getId());
         bookService.markBookAsBorrowed(bookId);
         borrowerService.addTransactionToBorrower(borrowerId, transaction.getId());
+
+        sendEmailNotification(borrower.getEmail(), book.getTitle(), totalAmount);
 
         return enrich(converter.toDto(transactionRepository.save(transaction)));
     }
@@ -116,6 +120,14 @@ public class BorrowingTransactionService {
         );
 
         transaction.setInsuranceRefunded(refund.getStatus() == Status.SUCCESS);
+    }
+
+    private void sendEmailNotification(String toEmail, String bookTitle, BigDecimal price) {
+        EmailRequest email = new EmailRequest();
+        email.setEmail(toEmail);
+        email.setMessage("You have successfully borrowed the book: " + bookTitle +
+                ". Total price: " + price + " USD.");
+        emailClient.sendEmail(email);
     }
 
     private void validateBorrowPeriod(int days) {
