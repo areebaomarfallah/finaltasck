@@ -47,4 +47,26 @@ public class AuthorController {
         authorService.deleteAuthor(id);
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/{id}/books")
+    public ResponseEntity<List<UUID>> getBooksByAuthor(@PathVariable UUID id) {
+        return ResponseEntity.ok(authorService.getBooksByAuthor(id));
+    }
+
+    @PutMapping("/{authorId}/books/{bookId}/add")
+    public ResponseEntity<Void> addBookToAuthor(@PathVariable UUID authorId, @PathVariable UUID bookId) {
+        authorService.addBookToAuthor(authorId, bookId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{authorId}/books/{bookId}/remove")
+    public ResponseEntity<Void> removeBookFromAuthor(@PathVariable UUID authorId, @PathVariable UUID bookId) {
+        authorService.removeBookFromAuthor(authorId, bookId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/name")
+    public ResponseEntity<String> getAuthorName(@PathVariable UUID id) {
+        return ResponseEntity.ok(authorService.getAuthorName(id));
+    }
+
 }

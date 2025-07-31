@@ -6,7 +6,6 @@ import com.library.library_management_system.dto.converter.AuthorConverter;
 import com.library.library_management_system.exception.ResourceNotFoundException;
 import com.library.library_management_system.model.Author;
 import com.library.library_management_system.repository.AuthorRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

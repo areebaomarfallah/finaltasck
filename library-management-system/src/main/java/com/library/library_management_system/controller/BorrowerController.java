@@ -46,4 +46,32 @@ public class BorrowerController {
         borrowerService.deleteBorrower(id);
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/{id}/name")
+    public ResponseEntity<String> getBorrowerName(@PathVariable UUID id) {
+        return ResponseEntity.ok(borrowerService.getBorrowerName(id));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateBorrowerStatus(
+            @PathVariable UUID id,
+            @RequestParam CommonEnum.AccountStatus status) {
+        borrowerService.updateBorrowerStatus(id, status);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{borrowerId}/transactions/{transactionId}")
+    public ResponseEntity<Void> addTransactionToBorrower(
+            @PathVariable UUID borrowerId,
+            @PathVariable UUID transactionId) {
+        borrowerService.addTransactionToBorrower(borrowerId, transactionId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{borrowerId}/transactions/{transactionId}")
+    public ResponseEntity<Void> removeTransactionFromBorrower(
+            @PathVariable UUID borrowerId,
+            @PathVariable UUID transactionId) {
+        borrowerService.removeTransactionFromBorrower(borrowerId, transactionId);
+        return ResponseEntity.noContent().build();
+    }
 }

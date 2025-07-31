@@ -1,9 +1,7 @@
 package com.library.library_management_system.controller;
 
-import com.library.library_management_system.dto.BorrowingTransactionRequestDTO;
 import com.library.library_management_system.dto.BorrowingTransactionResponseDTO;
 import com.library.library_management_system.service.BorrowingTransactionService;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
